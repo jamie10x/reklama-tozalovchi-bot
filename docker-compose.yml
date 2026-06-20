@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-adcleaner}
+      POSTGRES_USER: ${POSTGRES_USER:-adcleaner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-adcleaner} -d ${POSTGRES_DB:-adcleaner}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  bot:
+    build: .
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-adcleaner}:${POSTGRES_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-adcleaner}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DEFAULT_MODE: ${DEFAULT_MODE:-normal}
+      DELETION_LOG_RETENTION_HOURS: ${DELETION_LOG_RETENTION_HOURS:-24}
+      CLEANUP_INTERVAL_MINUTES: ${CLEANUP_INTERVAL_MINUTES:-30}
+      MESSAGE_EXCERPT_MAX_LENGTH: ${MESSAGE_EXCERPT_MAX_LENGTH:-250}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

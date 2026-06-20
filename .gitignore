@@ -1,0 +1,88 @@
+# ── Environment ──────────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+*.egg-info/
+.eggs/
+*.so
+MANIFEST
+
+# ── Virtual Environments ────────────────────────────────────
+venv/
+.venv/
+virtualenv/
+env/
+.venv/
+
+# ── Testing ─────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage/
+coverage.xml
+*.cover
+*.py,cover
+.tox/
+.mypy_cache/
+.hypothesis/
+
+# ── Linting & Formatting ────────────────────────────────────
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ── IDE & Editor ────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+.vs/
+.ensime/
+.history/
+.ensime_cache/
+
+# ── OS ──────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ── Docker ──────────────────────────────────────────────────
+pgdata/
+
+# ── Logs ────────────────────────────────────────────────────
+*.log
+/logs/
+
+# ── Misc ────────────────────────────────────────────────────
+*.bak
+*.tmp
+*.temp
+.cache/
