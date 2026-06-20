@@ -36,6 +36,6 @@ class ErrorLoggingMiddleware(BaseMiddleware):
             return await handler(event, data)
         except Exception:
             logger.exception(
-                "Unhandled error processing update",
-                extra={"update_type": type(event).__name__},
+                "Unhandled error processing %s",
+                type(event).__name__,
             )

@@ -4,7 +4,7 @@ import re
 from aiogram import F, Router, types
 from aiogram.filters import Command
 
-from app.bot.filters import IsGroupAdmin, IsGroupMessage
+from app.bot.filters import IsGroupMessage
 from app.bot.keyboards import confirm_delete_data_keyboard, mode_keyboard
 from app.database.repositories.allowlist import AllowlistRepository
 from app.database.repositories.chats import ChatRepository
@@ -25,8 +25,18 @@ async def _ensure_admin(message: types.Message, session) -> bool:
         return False
     is_admin = await is_user_admin(message.bot, message.chat.id, message.from_user.id)
     if not is_admin:
+        logger.warning(
+            "Admin check failed for user %d in chat %d",
+            message.from_user.id,
+            message.chat.id,
+        )
         await message.answer("You must be a group administrator to use this command.")
         return False
+    logger.debug(
+        "Admin check passed for user %d in chat %d",
+        message.from_user.id,
+        message.chat.id,
+    )
     return True
 
 
@@ -38,7 +48,7 @@ async def start_group(message: types.Message) -> None:
     )
 
 
-@router.message(Command("on"), IsGroupAdmin())
+@router.message(Command("on"), IsGroupMessage())
 async def enable_protection(message: types.Message, session=None) -> None:
     if not await _ensure_admin(message, session):
         return
@@ -50,7 +60,7 @@ async def enable_protection(message: types.Message, session=None) -> None:
     await message.answer("✅ Advertisement protection is now enabled.")
 
 
-@router.message(Command("off"), IsGroupAdmin())
+@router.message(Command("off"), IsGroupMessage())
 async def disable_protection(message: types.Message, session=None) -> None:
     if not await _ensure_admin(message, session):
         return
@@ -62,7 +72,7 @@ async def disable_protection(message: types.Message, session=None) -> None:
     await message.answer("✅ Advertisement protection is now disabled.")
 
 
-@router.message(Command("mode"), IsGroupAdmin())
+@router.message(Command("mode"), IsGroupMessage())
 async def change_mode(message: types.Message, session=None) -> None:
     if not await _ensure_admin(message, session):
         return
@@ -112,7 +122,7 @@ DOMAIN_IN_TEXT = re.compile(
 )
 
 
-@router.message(Command("allow"), IsGroupAdmin())
+@router.message(Command("allow"), IsGroupMessage())
 async def allow_entity(message: types.Message, session=None) -> None:
     if not await _ensure_admin(message, session):
         return
@@ -180,7 +190,7 @@ async def allow_entity(message: types.Message, session=None) -> None:
     await message.reply(result.message)
 
 
-@router.message(Command("removeallow"), IsGroupAdmin())
+@router.message(Command("removeallow"), IsGroupMessage())
 async def remove_allow(message: types.Message, session=None) -> None:
     if not await _ensure_admin(message, session):
         return
@@ -203,7 +213,7 @@ async def remove_allow(message: types.Message, session=None) -> None:
     await message.reply(result.message)
 
 
-@router.message(Command("allowlist"), IsGroupAdmin())
+@router.message(Command("allowlist"), IsGroupMessage())
 async def show_allowlist(message: types.Message, session=None) -> None:
     if not await _ensure_admin(message, session):
         return
@@ -240,7 +250,7 @@ async def show_status(message: types.Message, session=None) -> None:
     )
 
 
-@router.message(Command("recent"), IsGroupAdmin())
+@router.message(Command("recent"), IsGroupMessage())
 async def show_recent(message: types.Message, session=None) -> None:
     if not await _ensure_admin(message, session):
         return
@@ -272,7 +282,7 @@ async def show_recent(message: types.Message, session=None) -> None:
     await message.answer(text)
 
 
-@router.message(Command("deletedata"), IsGroupAdmin())
+@router.message(Command("deletedata"), IsGroupMessage())
 async def delete_data(message: types.Message, session=None) -> None:
     if not await _ensure_admin(message, session):
         return

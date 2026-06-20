@@ -1,19 +1,10 @@
+import logging
+
 from aiogram.enums import ChatType
 from aiogram.filters import Filter
-from aiogram.types import ChatMemberAdministrator, ChatMemberOwner, Message
+from aiogram.types import Message
 
-
-class IsGroupAdmin(Filter):
-    async def __call__(self, message: Message) -> bool:
-        if message.chat.type not in (
-            ChatType.GROUP,
-            ChatType.SUPERGROUP,
-        ):
-            return False
-        if message.from_user is None:
-            return False
-        member = await message.bot.get_chat_member(message.chat.id, message.from_user.id)
-        return isinstance(member, (ChatMemberAdministrator, ChatMemberOwner))
+logger = logging.getLogger(__name__)
 
 
 class IsGroupMessage(Filter):
