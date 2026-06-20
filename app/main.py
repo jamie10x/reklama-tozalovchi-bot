@@ -9,7 +9,7 @@ from aiogram.enums import ParseMode
 from app.bot.commands import set_bot_commands
 from app.bot.middlewares import DatabaseSessionMiddleware, ErrorLoggingMiddleware
 from app.config import load_config
-from app.database.session import close_db, init_db
+from app.database.session import close_db, get_session, init_db
 from app.handlers import commands, edited_messages, membership, messages, private
 from app.logging_config import setup_logging
 from app.services.cleanup import start_cleanup_task
@@ -48,6 +48,11 @@ async def main() -> None:
     cleanup_task = start_cleanup_task(config.cleanup_interval_minutes)
 
     await set_bot_commands(bot)
+
+    async with get_session() as session:
+        from app.services.permissions import refresh_all_bot_permissions
+
+        await refresh_all_bot_permissions(bot, session)
 
     logger.info("Starting polling...")
     try:

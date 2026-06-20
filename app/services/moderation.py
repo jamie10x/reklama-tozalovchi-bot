@@ -9,6 +9,7 @@ from app.database.repositories.allowlist import AllowlistRepository
 from app.database.repositories.chats import ChatRepository
 from app.database.repositories.deletion_logs import DeletionLogRepository
 from app.detector.service import DetectionService
+from app.services.permissions import bot_can_delete_messages as _bot_can_delete
 from app.services.permissions import is_user_admin
 
 logger = logging.getLogger(__name__)
@@ -46,11 +47,19 @@ class ModerationService:
             return False
 
         if not chat.bot_can_delete_messages:
-            logger.warning(
-                "Bot cannot delete messages in chat %d — skipping detection",
-                chat_id,
-            )
-            return False
+            can_delete = await _bot_can_delete(self._bot, chat_id)
+            if can_delete:
+                await self._chat_repo.set_bot_permission(chat_id, True)
+                logger.info(
+                    "Permission re-check: bot can now delete in chat %d",
+                    chat_id,
+                )
+            else:
+                logger.warning(
+                    "Bot cannot delete messages in chat %d — skipping detection",
+                    chat_id,
+                )
+                return False
 
         if sender_id is not None:
             is_admin = await is_user_admin(self._bot, chat_id, sender_id)
