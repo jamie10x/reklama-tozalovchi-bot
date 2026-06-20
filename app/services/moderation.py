@@ -46,6 +46,10 @@ class ModerationService:
             return False
 
         if not chat.bot_can_delete_messages:
+            logger.warning(
+                "Bot cannot delete messages in chat %d — skipping detection",
+                chat_id,
+            )
             return False
 
         if sender_id is not None:
