@@ -13,8 +13,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:5432:5432"
+    # ports:
+    #   - "127.0.0.1:5432:5432"   # uncomment to expose DB externally (conflicts with local PG)
 
   bot:
     build: .
