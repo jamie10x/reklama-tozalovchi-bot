@@ -25,10 +25,16 @@ async def _ensure_admin(message: types.Message, session) -> bool:
         return False
     is_admin = await is_user_admin(message.bot, message.chat.id, message.from_user.id)
     if not is_admin:
+        chat_title = (
+            message.chat.title
+            or message.chat.username
+            or str(message.chat.id)
+        )
         logger.warning(
-            "Admin check failed for user %d in chat %d",
+            "Admin check failed: user=%d chat_id=%d chat=%r",
             message.from_user.id,
             message.chat.id,
+            chat_title,
         )
         await message.answer("You must be a group administrator to use this command.")
         return False

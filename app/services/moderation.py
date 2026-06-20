@@ -47,17 +47,19 @@ class ModerationService:
             return False
 
         if not chat.bot_can_delete_messages:
-            can_delete = await _bot_can_delete(self._bot, chat_id)
+            can_delete = await _bot_can_delete(self._bot, chat_id, chat.title)
             if can_delete:
                 await self._chat_repo.set_bot_permission(chat_id, True)
                 logger.info(
-                    "Permission re-check: bot can now delete in chat %d",
+                    "Permission re-check: bot can now delete in chat_id=%d title=%r",
                     chat_id,
+                    chat.title,
                 )
             else:
                 logger.warning(
-                    "Bot cannot delete messages in chat %d — skipping detection",
+                    "Bot cannot delete messages: chat_id=%d title=%r",
                     chat_id,
+                    chat.title,
                 )
                 return False
 
@@ -98,9 +100,10 @@ class ModerationService:
         try:
             await self._bot.delete_message(chat_id, message_id)
             logger.info(
-                "Deleted message %d in chat %d (score=%d reasons=%s)",
+                "Deleted msg=%d chat_id=%d title=%r score=%d reasons=%s",
                 message_id,
                 chat_id,
+                chat.title,
                 result.score,
                 result.reasons,
             )

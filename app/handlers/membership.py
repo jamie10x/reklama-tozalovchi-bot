@@ -47,9 +47,9 @@ async def _register_or_update_chat(
             owner_user_id=owner_id,
             linked_chat_id=linked_chat_id,
         )
-        logger.info("Bot added to chat %d (%s)", chat.id, chat.title)
+        logger.info("Bot added to chat_id=%d title=%r", chat.id, chat.title)
     else:
-        logger.info("Bot already registered in chat %d — updating permissions", chat.id)
+        logger.info("Bot already registered: chat_id=%d title=%r", chat.id, chat.title)
 
     can_delete = await bot_can_delete_messages(bot, chat.id)
     await repo.set_bot_permission(chat.id, can_delete)
@@ -85,14 +85,14 @@ async def bot_added_to_group(event: types.ChatMemberUpdated, session=None) -> No
 async def bot_removed_from_group(event: types.ChatMemberUpdated, session=None) -> None:
     repo = ChatRepository(session)
     await repo.mark_removed(event.chat.id)
-    logger.info("Bot removed from chat %d (%s)", event.chat.id, event.chat.title)
+    logger.info("Bot removed: chat_id=%d title=%r", event.chat.id, event.chat.title)
 
 
 @router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))
 async def bot_left_group(event: types.ChatMemberUpdated, session=None) -> None:
     repo = ChatRepository(session)
     await repo.mark_removed(event.chat.id)
-    logger.info("Bot left chat %d (%s)", event.chat.id, event.chat.title)
+    logger.info("Bot left: chat_id=%d title=%r", event.chat.id, event.chat.title)
 
 
 @router.my_chat_member()
@@ -110,7 +110,8 @@ async def bot_permission_updated(event: types.ChatMemberUpdated, session=None) -
             "⚠️ Delete permission removed. Advertisements will not be deleted.",
         )
     logger.info(
-        "Bot permissions updated in chat %d: can_delete=%s",
+        "Permission update: chat_id=%d title=%r can_delete=%s",
         event.chat.id,
+        event.chat.title,
         can_delete,
     )

@@ -48,7 +48,7 @@ class AllowlistService:
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
             return AllowlistAddResult(False, "Chat not found.")
-        if self._repo.exists(chat.id, "user", normalized):
+        if await self._repo.exists(chat.id, "user", normalized):
             return AllowlistAddResult(False, f"@{normalized} is already allowed.")
         await self._repo.add(
             chat_id=chat.id,
@@ -70,7 +70,7 @@ class AllowlistService:
         if chat is None:
             return AllowlistAddResult(False, "Chat not found.")
         value = str(telegram_user_id)
-        if self._repo.exists(chat.id, "user", value):
+        if await self._repo.exists(chat.id, "user", value):
             return AllowlistAddResult(False, f"User {display_name} is already allowed.")
         await self._repo.add(
             chat_id=chat.id,
@@ -87,7 +87,7 @@ class AllowlistService:
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
             return AllowlistAddResult(False, "Chat not found.")
-        if self._repo.exists(chat.id, "bot", normalized):
+        if await self._repo.exists(chat.id, "bot", normalized):
             return AllowlistAddResult(False, f"@{normalized} is already allowed.")
         await self._repo.add(
             chat_id=chat.id,
@@ -110,7 +110,7 @@ class AllowlistService:
             return AllowlistAddResult(False, "Chat not found.")
         value = str(bot_user_id) if bot_username is None else normalize_username(bot_username)
         display = bot_username or f"bot_{bot_user_id}"
-        if self._repo.exists(chat.id, "bot", value):
+        if await self._repo.exists(chat.id, "bot", value):
             return AllowlistAddResult(False, f"@{display} is already allowed.")
         await self._repo.add(
             chat_id=chat.id,
@@ -127,7 +127,7 @@ class AllowlistService:
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
             return AllowlistAddResult(False, "Chat not found.")
-        if self._repo.exists(chat.id, "domain", normalized):
+        if await self._repo.exists(chat.id, "domain", normalized):
             return AllowlistAddResult(False, f"{normalized} is already allowed.")
         await self._repo.add(
             chat_id=chat.id,
@@ -145,7 +145,7 @@ class AllowlistService:
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
             return AllowlistAddResult(False, "Chat not found.")
-        if self._repo.exists(chat.id, "telegram_chat", normalized):
+        if await self._repo.exists(chat.id, "telegram_chat", normalized):
             return AllowlistAddResult(False, f"@{normalized} is already allowed.")
         await self._repo.add(
             chat_id=chat.id,
