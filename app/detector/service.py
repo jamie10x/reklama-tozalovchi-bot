@@ -13,6 +13,7 @@ from app.detector.normalizer import (
     normalize_telegram_username,
     normalize_text,
 )
+from app.detector.phrases import SUPPORTED_LANGUAGES, PhraseMatcher
 from app.detector.scoring import scoring_pipeline
 
 _REPEAT_CACHE: OrderedDict[str, float] = OrderedDict()
@@ -108,9 +109,9 @@ class DetectionService:
             filtered_telegram.append(uname)
 
         if not filtered_urls and not filtered_telegram and not is_forwarded:
-            from app.detector.phrases import PhraseMatcher
-
-            matched_phrases = PhraseMatcher.find_matches(normalized, languages=["en"])
+            matched_phrases = PhraseMatcher.find_matches(
+                normalized, languages=SUPPORTED_LANGUAGES
+            )
             if not matched_phrases:
                 return DetectionResult()
 

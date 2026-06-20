@@ -8,7 +8,7 @@ from app.detector.normalizer import (
     normalize_domain,
     normalize_telegram_username,
 )
-from app.detector.phrases import PhraseMatcher
+from app.detector.phrases import SUPPORTED_LANGUAGES, PhraseMatcher
 
 if TYPE_CHECKING:
     from app.database.repositories.allowlist import AllowlistRepository
@@ -62,7 +62,7 @@ def scoring_pipeline(
     chat_uuid,
 ) -> DetectionResult:
     result = DetectionResult()
-    matched_phrases = PhraseMatcher.find_matches(text, languages=["en"])
+    matched_phrases = PhraseMatcher.find_matches(text, languages=SUPPORTED_LANGUAGES)
 
     all_urls = list(urls)
 
@@ -113,6 +113,7 @@ def scoring_pipeline(
         score += MEDIUM_SIGNALS["forwarded_unrelated_channel"]
         result.reasons.append("forwarded_unrelated_channel")
 
+    commercial_count = 0
     for _, category in matched_phrases:
         if category == "telegram_invite":
             if has_telegram_links:
@@ -124,6 +125,11 @@ def scoring_pipeline(
         elif category == "commercial":
             score += MEDIUM_SIGNALS["price_or_discount"]
             result.reasons.append("price_or_discount")
+            commercial_count += 1
+
+    if commercial_count >= 3:
+        score += STRONG_SIGNALS["strong_ad_phrase"]
+        result.reasons.append("multiple_ad_phrases")
 
     for _, category in matched_phrases:
         if category == "telegram_invite" and not has_telegram_links and not has_url:
