@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import { ReactNode } from "react";
 import type { ObservedMessage } from "../api/queries";
+import { useI18n } from "../i18n";
 
 export const severityBadge: Record<string, string> = {
   critical: "badge-critical",
@@ -110,13 +111,14 @@ export function SkeletonRows({ rows = 5 }: { rows?: number }) {
 }
 
 export function RiskMeter({ score }: { score: number }) {
+  const { t } = useI18n();
   const width = Math.max(4, Math.min(score, 100));
   const tone =
     score >= 76 ? "bg-red-500" : score >= 51 ? "bg-orange-500" : score >= 21 ? "bg-yellow-500" : "bg-green-500";
   return (
     <div className="w-full">
       <div className="flex items-center justify-between text-xs text-surface-500">
-        <span>Risk</span>
+        <span>{t("risk")}</span>
         <span className="font-mono">{score}</span>
       </div>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-100">
@@ -162,6 +164,7 @@ export function detectionReasons(message: ObservedMessage) {
 }
 
 export function senderName(message: ObservedMessage) {
+  // Sender display values are observed Telegram data; only the fallback is localized in the UI component.
   const name = [message.sender_first_name, message.sender_last_name].filter(Boolean).join(" ");
   if (message.sender_username) return `@${message.sender_username}`;
   return name || (message.sender_id ? String(message.sender_id) : "Unknown sender");
@@ -176,10 +179,11 @@ export function MessageInfoCard({
   action?: ReactNode;
   compact?: boolean;
 }) {
+  const { t } = useI18n();
   const reasons = detectionReasons(message);
   const scoreRows = [
-    ["Ad", message.ad_score],
-    ["Security", message.security_score],
+    [t("advertisement"), message.ad_score],
+    [t("security"), message.security_score],
     ["AI", message.ai_score],
   ].filter(([, value]) => value !== null && value !== undefined);
 
@@ -200,13 +204,17 @@ export function MessageInfoCard({
             <span className="font-mono">user={message.sender_id ?? "-"}</span>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-semibold text-surface-900">{senderName(message)}</span>
+            <span className="font-semibold text-surface-900">
+              {message.sender_username || message.sender_first_name || message.sender_last_name || message.sender_id
+                ? senderName(message)
+                : t("unknown_sender")}
+            </span>
             {message.reply_to_message_id && (
               <span className="font-mono text-xs text-surface-500">reply={message.reply_to_message_id}</span>
             )}
           </div>
           <p className={clsx("mt-3 whitespace-pre-wrap rounded-lg bg-surface-50 p-3 text-sm text-surface-800", compact && "line-clamp-4")}>
-            {message.text || (message.has_text ? "Text hidden by capture policy" : "No message text")}
+            {message.text || (message.has_text ? t("capture_policy_hidden") : t("no_message_text"))}
           </p>
           {reasons.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -219,7 +227,7 @@ export function MessageInfoCard({
           )}
           {!compact && message.detection_result && (
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs font-medium text-surface-500">Detection JSON</summary>
+              <summary className="cursor-pointer text-xs font-medium text-surface-500">{t("detection_json")}</summary>
               <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-surface-950 p-3 text-xs text-white">
                 {JSON.stringify(message.detection_result, null, 2)}
               </pre>

@@ -75,7 +75,7 @@ export function MemberOSINTPage() {
     <div>
       <PageHeader
         title={t("member_intel")}
-        description="Telegram-only profile built from data the bot is authorized to observe in groups."
+        description={t("member_intel_desc")}
       />
 
       <div className="card mb-6">
@@ -110,12 +110,12 @@ export function MemberOSINTPage() {
       )}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Intel lookup failed. Check the user ID and API authentication.
+          {t("intel_lookup_failed")}
         </div>
       )}
 
       {!validId && (
-        <EmptyState title="Enter a Telegram user ID" description="Open a member from Activity or Group Operations to prefill this page." />
+        <EmptyState title={t("enter_telegram_user_id")} description={t("open_member_prefill")} />
       )}
 
       {intel?.user && validId && (
@@ -126,13 +126,13 @@ export function MemberOSINTPage() {
                 <h3 className="card-title">{t("member_profile")}</h3>
               </div>
               <KeyValue label="ID" value={<span className="font-mono">{intel.user.telegram_id}</span>} />
-              <KeyValue label="Username" value={intel.user.current_username ? `@${intel.user.current_username}` : "-"} />
+              <KeyValue label={t("username")} value={intel.user.current_username ? `@${intel.user.current_username}` : "-"} />
               <KeyValue
-                label="Name"
+                label={t("name")}
                 value={[intel.user.current_first_name, intel.user.current_last_name].filter(Boolean).join(" ") || "-"}
               />
-              <KeyValue label="First seen" value={relativeTime(intel.user.first_seen_at)} />
-              <KeyValue label="Last seen" value={relativeTime(intel.user.last_seen_at)} />
+              <KeyValue label={t("first_seen")} value={relativeTime(intel.user.first_seen_at)} />
+              <KeyValue label={t("last_seen")} value={relativeTime(intel.user.last_seen_at)} />
               <div className="mt-4">
                 <RiskMeter score={intel.user.risk_score} />
               </div>
@@ -179,26 +179,26 @@ export function MemberOSINTPage() {
                   {intel.aliases.map((alias, index) => (
                     <div key={index} className="rounded-lg border border-surface-200 p-3">
                       <p className="text-sm font-semibold text-surface-900">
-                        {alias.username ? `@${alias.username}` : "No username"}
+                        {alias.username ? `@${alias.username}` : t("no_username")}
                       </p>
                       <p className="text-xs text-surface-500">
-                        {[alias.first_name, alias.last_name].filter(Boolean).join(" ") || "No display name"}
+                        {[alias.first_name, alias.last_name].filter(Boolean).join(" ") || t("no_display_name")}
                       </p>
-                      <p className="mt-1 text-xs text-surface-400">last seen {relativeTime(alias.last_seen_at)}</p>
+                      <p className="mt-1 text-xs text-surface-400">{t("last_seen")} {relativeTime(alias.last_seen_at)}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <EmptyState title="No alias history yet" />
+                <EmptyState title={t("no_alias_history")} />
               )}
             </div>
           </div>
 
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
-              <StatCard label="Groups" value={totals.groups} helper={`${totals.messages} observed messages`} />
-              <StatCard label="Events" value={totals.events} helper={`${totals.deleted} deleted messages`} tone={totals.events ? "text-red-700" : "text-surface-900"} />
-              <StatCard label="Signals" value={totals.signals} helper={`${totals.aliases} aliases recorded`} tone={totals.signals ? "text-orange-700" : "text-surface-900"} />
+              <StatCard label={t("group_profiles")} value={totals.groups} helper={`${totals.messages} ${t("observed_messages").toLowerCase()}`} />
+              <StatCard label={t("events")} value={totals.events} helper={`${totals.deleted} ${t("deleted_messages")}`} tone={totals.events ? "text-red-700" : "text-surface-900"} />
+              <StatCard label={t("risk_signals")} value={totals.signals} helper={`${totals.aliases} ${t("aliases_recorded")}`} tone={totals.signals ? "text-orange-700" : "text-surface-900"} />
             </div>
 
             <div className="card">
@@ -217,11 +217,11 @@ export function MemberOSINTPage() {
                         <span>{profile.message_count ?? 0} messages</span>
                         <span>{profile.security_event_count ?? 0} events</span>
                         <span>{profile.deleted_message_count ?? 0} deleted</span>
-                        <span>last {relativeTime(profile.last_message_at)}</span>
+                        <span>{t("last_seen")} {relativeTime(profile.last_message_at)}</span>
                       </div>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <Link to={`/groups/${profile.chat_id}`} className="btn-secondary px-2 py-1.5">
-                          Open group
+                          {t("open_operations")}
                         </Link>
                         <button
                           className="btn-secondary px-2 py-1.5"
@@ -244,7 +244,7 @@ export function MemberOSINTPage() {
                   ))}
                 </div>
               ) : (
-                <EmptyState title="No group profiles yet" />
+                <EmptyState title={t("no_group_profiles")} />
               )}
             </div>
 
@@ -265,7 +265,7 @@ export function MemberOSINTPage() {
                   ))}
                 </div>
               ) : (
-                <EmptyState title="No risk signals yet" />
+                <EmptyState title={t("no_risk_signals")} />
               )}
             </div>
 
@@ -280,7 +280,7 @@ export function MemberOSINTPage() {
                   ))}
                 </div>
               ) : (
-                <EmptyState title="No observed messages for this member yet" />
+                <EmptyState title={t("no_member_messages")} />
               )}
             </div>
           </div>

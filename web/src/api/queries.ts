@@ -428,7 +428,8 @@ export type EnforcementActionType =
   | "get_chat_administrators"
   | "get_chat_member_count"
   | "get_user_profile_photos"
-  | "save_observed_state";
+  | "save_observed_state"
+  | "send_recent_messages";
 
 export interface EnforcementAction {
   id: string;

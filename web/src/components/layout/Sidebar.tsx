@@ -98,7 +98,7 @@ export function Sidebar() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-surface-900">
-              {officer?.display_name || "Officer"}
+              {officer?.display_name || t("officer")}
             </p>
             <p className="text-xs text-surface-500">{officer?.role}</p>
           </div>

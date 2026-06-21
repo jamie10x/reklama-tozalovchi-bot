@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 from datetime import datetime, timezone
 
 from aiogram import Bot
-from aiogram.types import ChatPermissions
+from aiogram.types import BufferedInputFile, ChatPermissions
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
+from app.database.repositories.activity import ActivityRepository
 from app.database.repositories.enforcement import EnforcementRepository
 from app.database.secadmin_models import EnforcementAction
 from app.database.session import get_secadmin_sessionmaker
@@ -26,6 +28,33 @@ def _json_model(obj):
     return str(obj)
 
 
+def _message_export_row(message) -> dict:
+    return {
+        "chat_id": message.chat_id,
+        "message_id": message.message_id,
+        "sender_id": message.sender_id,
+        "sender_username": message.sender_username,
+        "sender_first_name": message.sender_first_name,
+        "sender_last_name": message.sender_last_name,
+        "message_type": message.message_type,
+        "text": message.text if message.text_stored else None,
+        "text_stored": message.text_stored,
+        "has_text": message.has_text,
+        "is_edited": message.is_edited,
+        "is_forwarded": message.is_forwarded,
+        "reply_to_message_id": message.reply_to_message_id,
+        "detection_status": message.detection_status,
+        "risk_score": message.risk_score,
+        "ad_score": message.ad_score,
+        "security_score": message.security_score,
+        "ai_score": message.ai_score,
+        "detection_result": message.detection_result,
+        "message_date": message.message_date.isoformat() if message.message_date else None,
+        "created_at": message.created_at.isoformat() if message.created_at else None,
+        "updated_at": message.updated_at.isoformat() if message.updated_at else None,
+    }
+
+
 class EnforcementBridge:
     def __init__(self, bot: Bot) -> None:
         self._bot = bot
@@ -33,7 +62,7 @@ class EnforcementBridge:
         self._task: asyncio.Task | None = None
         self._worker_id = f"{WORKER_ID_PREFIX}-{id(self)}"
 
-    async def _execute_action(self, action: EnforcementAction) -> dict:
+    async def _execute_action(self, action: EnforcementAction, session: AsyncSession) -> dict:
         action_type = action.action_type
         chat_id = action.target_chat_id
         message_id = action.target_message_id
@@ -174,6 +203,45 @@ class EnforcementBridge:
         elif action_type == "save_observed_state":
             return {"saved": True, "info": "Observed state is continuously persisted"}
 
+        elif action_type == "send_recent_messages":
+            if chat_id is None:
+                return {"error": "send_recent_messages requires target_chat_id"}
+            if action.requested_by_officer_id is None:
+                return {"error": "send_recent_messages requires requested_by_officer_id"}
+            try:
+                repo = ActivityRepository(session)
+                messages = await repo.list_messages(limit=200, chat_id=chat_id)
+                payload = {
+                    "chat_id": chat_id,
+                    "limit": 200,
+                    "count": len(messages),
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "source": "observed_messages_database",
+                    "telegram_history_note": (
+                        "Telegram Bot API cannot fetch old chat history. This export contains only messages "
+                        "the bot already observed and stored according to the capture policy."
+                    ),
+                    "messages": [_message_export_row(message) for message in messages],
+                }
+                content = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+                filename = f"observed-messages-{chat_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+                document = BufferedInputFile(content, filename=filename)
+                await self._bot.send_document(
+                    chat_id=action.requested_by_officer_id,
+                    document=document,
+                    caption=f"Last {len(messages)} observed messages for chat {chat_id}",
+                )
+                return {
+                    "sent": True,
+                    "recipient_id": action.requested_by_officer_id,
+                    "chat_id": chat_id,
+                    "message_count": len(messages),
+                    "filename": filename,
+                    "note": "Export includes only messages already observed and stored by this bot.",
+                }
+            except Exception as e:
+                return {"error": str(e)}
+
         elif action_type in ("block_indicator", "allow_indicator"):
             return {"info": f"{action_type} logged but no Telegram API action needed"}
 
@@ -186,7 +254,7 @@ class EnforcementBridge:
             batch_size=CLAIM_BATCH_SIZE,
         )
         for action in actions:
-            result = await self._execute_action(action)
+            result = await self._execute_action(action, session)
             is_error = "error" in result
             if is_error:
                 await repo.mark_failed(action.id, result=result)

@@ -1,22 +1,30 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useAuth } from "../stores/auth";
+import { useI18n } from "../i18n";
 
-const loginSchema = z.object({
-  telegram_id: z.coerce.number({ message: "Telegram ID raqam bo'lishi kerak" }),
-  token: z.string().min(1, "Token talab qilinadi"),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginForm = {
+  telegram_id: number;
+  token: string;
+};
 
 export function LoginPage() {
+  const { t } = useI18n();
   const { login } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        telegram_id: z.coerce.number({ message: t("telegram_id_number") }),
+        token: z.string().min(1, t("token_required")),
+      }),
+    [t],
+  );
 
   const {
     register,
@@ -33,7 +41,7 @@ export function LoginPage() {
       await login(data.telegram_id, data.token);
       navigate("/");
     } catch {
-      setError("Kirish muvaffaqiyatsiz. Telegram ID yoki tokenni tekshiring.");
+      setError(t("login_failed"));
     } finally {
       setLoading(false);
     }
@@ -47,7 +55,7 @@ export function LoginPage() {
             <span className="text-2xl font-bold text-white">S</span>
           </div>
           <h1 className="text-2xl font-bold text-surface-900">SecAdmin</h1>
-          <p className="mt-1 text-sm text-surface-500">Xavfsizlik boshqaruv paneli</p>
+          <p className="mt-1 text-sm text-surface-500">{t("login_subtitle")}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="card space-y-4">
@@ -79,7 +87,7 @@ export function LoginPage() {
               {...register("token")}
               className="input"
               type="password"
-              placeholder="Maxfiy token"
+              placeholder={t("secret_token")}
             />
             {errors.token && (
               <p className="mt-1 text-xs text-red-600">{errors.token.message}</p>
@@ -87,7 +95,7 @@ export function LoginPage() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? "Kirish..." : "Kirish"}
+            {loading ? t("logging_in") : t("login")}
           </button>
         </form>
       </div>

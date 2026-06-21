@@ -555,7 +555,7 @@ class EnforcementAction(SecAdminBase):
             "'allow_indicator', 'refresh_member', 'refresh_group_permissions', "
             "'restrict_member', 'mute_member', 'ban_member', 'get_chat_info', "
             "'get_chat_administrators', 'get_chat_member_count', "
-            "'get_user_profile_photos', 'save_observed_state')",
+            "'get_user_profile_photos', 'save_observed_state', 'send_recent_messages')",
             name="ck_enforcement_action_type",
         ),
         CheckConstraint(

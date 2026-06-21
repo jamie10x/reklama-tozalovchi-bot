@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
 import { useDashboard, useEnforcement, useEvents, useGroups, useLiveActivity } from "../api/queries";
 import { Badge, EmptyState, PageHeader, RiskMeter, SkeletonRows, StatCard, relativeTime } from "../components/soc";
+import { useI18n } from "../i18n";
 
 function permissionTone(canDelete: boolean) {
   return canDelete ? "badge-low" : "badge-critical";
 }
 
 export function DashboardPage() {
+  const { t } = useI18n();
   const { data: stats, isLoading: statsLoading } = useDashboard();
   const { data: groups, isLoading: groupsLoading } = useGroups();
   const { data: live } = useLiveActivity();
@@ -25,15 +27,15 @@ export function DashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Command Center"
-        description="Operational view for authorized Telegram group monitoring, evidence capture, and bot response."
+        title={t("command_center")}
+        description={t("dashboard_description")}
         action={
           <div className="flex gap-2">
             <Link to="/monitor" className="btn-primary">
-              Open triage
+              {t("open_triage")}
             </Link>
             <Link to="/commands" className="btn-secondary">
-              Queue command
+              {t("queue_command")}
             </Link>
           </div>
         }
@@ -41,27 +43,27 @@ export function DashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Open events"
+          label={t("open_events")}
           value={statsLoading ? <span className="inline-block h-8 w-14 animate-pulse rounded bg-surface-200" /> : stats?.open_events ?? 0}
-          helper={`${criticalQueue.length} high-priority in queue`}
+          helper={`${criticalQueue.length} ${t("high_priority_queue")}`}
           tone="text-red-600"
         />
         <StatCard
-          label="Active groups"
+          label={t("active_groups")}
           value={statsLoading ? <span className="inline-block h-8 w-14 animate-pulse rounded bg-surface-200" /> : stats?.active_groups ?? 0}
-          helper={`${groupsWithoutDelete.length} need delete permission`}
+          helper={`${groupsWithoutDelete.length} ${t("need_delete_permission")}`}
           tone="text-surface-900"
         />
         <StatCard
-          label="Live flags"
+          label={t("live_flags")}
           value={live?.items.length ?? 0}
-          helper="Auto-refreshing every 5 seconds"
+          helper={t("auto_refresh_5s")}
           tone="text-orange-600"
         />
         <StatCard
-          label="Permission readiness"
+          label={t("permission_readiness")}
           value={`${avgPermissionScore}%`}
-          helper="Groups where deletion is available"
+          helper={t("deletion_available_groups")}
           tone={avgPermissionScore >= 80 ? "text-green-600" : "text-orange-600"}
         />
       </div>
@@ -70,18 +72,18 @@ export function DashboardPage() {
         <div className="card">
           <div className="card-header">
             <div>
-              <h3 className="card-title">Attention Queue</h3>
-              <p className="text-xs text-surface-500">Open high-risk events and live suspicious messages</p>
+              <h3 className="card-title">{t("attention_queue")}</h3>
+              <p className="text-xs text-surface-500">{t("attention_queue_desc")}</p>
             </div>
             <Link to="/events" className="link text-sm">
-              View all
+              {t("view_all")}
             </Link>
           </div>
 
           {criticalQueue.length === 0 && (live?.items.length ?? 0) === 0 ? (
             <EmptyState
-              title="No high-priority items right now"
-              description="When the bot detects phishing, scam, illegal goods, or severe spam indicators, they will appear here first."
+              title={t("no_priority_title")}
+              description={t("no_priority_desc")}
             />
           ) : (
             <div className="space-y-3">
@@ -99,7 +101,7 @@ export function DashboardPage() {
                         <span className="font-mono text-xs text-surface-400">#{event.event_number}</span>
                       </div>
                       <p className="mt-2 text-sm font-semibold text-surface-900">
-                        {event.title || event.message_excerpt || "Untitled event"}
+                        {event.title || event.message_excerpt || t("untitled_event")}
                       </p>
                       <p className="mt-1 font-mono text-xs text-surface-500">
                         chat={event.chat_id} user={event.sender_id ?? "-"} msg={event.message_id ?? "-"}
@@ -121,7 +123,7 @@ export function DashboardPage() {
                     <div>
                       <Badge value={message.detection_status} />
                       <p className="mt-2 text-sm font-medium text-surface-900">
-                        {message.text || "Text hidden by capture policy"}
+                        {message.text || t("capture_policy_hidden")}
                       </p>
                       <p className="mt-1 font-mono text-xs text-surface-500">
                         chat={message.chat_id} user={message.sender_id ?? "-"}
@@ -139,11 +141,11 @@ export function DashboardPage() {
           <div className="card">
             <div className="card-header">
               <div>
-                <h3 className="card-title">Group Permission Health</h3>
-                <p className="text-xs text-surface-500">Bot capability status by group</p>
+                <h3 className="card-title">{t("group_permission_health")}</h3>
+                <p className="text-xs text-surface-500">{t("group_permission_desc")}</p>
               </div>
               <Link to="/groups" className="link text-sm">
-                Manage
+                {t("manage")}
               </Link>
             </div>
             {groupsLoading ? (
@@ -163,22 +165,22 @@ export function DashboardPage() {
                       <p className="font-mono text-xs text-surface-500">{group.telegram_chat_id}</p>
                     </div>
                     <span className={`badge ${permissionTone(group.bot_can_delete_messages)}`}>
-                      {group.bot_can_delete_messages ? "ready" : "limited"}
+                      {group.bot_can_delete_messages ? t("ready") : t("limited")}
                     </span>
                   </Link>
                 ))}
               </div>
             ) : (
               <EmptyState
-                title="No groups registered"
-                description="Add the bot to a Telegram group and send a message so the bot can observe the group."
+                title={t("no_groups_visible")}
+                description={t("no_groups_desc")}
               />
             )}
           </div>
 
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Failed Commands</h3>
+              <h3 className="card-title">{t("failed_commands")}</h3>
             </div>
             {failedCommands?.items.length ? (
               <div className="space-y-3">
@@ -195,7 +197,7 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <EmptyState title="No failed bot actions" description="Telegram API command failures will be surfaced here." />
+              <EmptyState title={t("no_failed_actions")} description={t("failed_actions_desc")} />
             )}
           </div>
         </div>

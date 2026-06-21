@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useEvents } from "../api/queries";
 import { useDebounce } from "../hooks/useDebounce";
+import { useI18n } from "../i18n";
 
 const severityBadge: Record<string, string> = {
   critical: "badge-critical",
@@ -20,6 +21,7 @@ const statusBadge: Record<string, string> = {
 };
 
 export function EventsPage() {
+  const { t } = useI18n();
   const [status, setStatus] = useState("");
   const [severity, setSeverity] = useState("");
   const [eventType, setEventType] = useState("");
@@ -37,54 +39,54 @@ export function EventsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-surface-900">Voqealar</h2>
+        <h2 className="text-2xl font-bold text-surface-900">{t("events")}</h2>
         <p className="mt-1 text-sm text-surface-500">
-          Bot aniqlagan oxirgi 200 ta xavfsizlik va reklama voqealari
+          {t("events_desc")}
         </p>
       </div>
 
       <div className="card mb-6">
         <div className="flex flex-wrap gap-4">
           <div className="min-w-[160px]">
-            <label className="mb-1 block text-xs font-medium text-surface-500">Status</label>
+            <label className="mb-1 block text-xs font-medium text-surface-500">{t("status")}</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               className="input"
             >
-              <option value="">Barchasi</option>
-              <option value="open">Ochiq</option>
-              <option value="claimed">Qabul qilingan</option>
-              <option value="confirmed">Tasdiqlangan</option>
-              <option value="escalated">Escalated</option>
-              <option value="resolved">Hal qilingan</option>
-              <option value="false_positive">False positive</option>
+              <option value="">{t("all")}</option>
+              <option value="open">{t("open")}</option>
+              <option value="claimed">{t("claimed")}</option>
+              <option value="confirmed">{t("confirmed")}</option>
+              <option value="escalated">{t("escalated")}</option>
+              <option value="resolved">{t("resolved")}</option>
+              <option value="false_positive">{t("false_positive")}</option>
             </select>
           </div>
           <div className="min-w-[160px]">
-            <label className="mb-1 block text-xs font-medium text-surface-500">Daraja</label>
+            <label className="mb-1 block text-xs font-medium text-surface-500">{t("severity")}</label>
             <select
               value={severity}
               onChange={(e) => setSeverity(e.target.value)}
               className="input"
             >
-              <option value="">Barchasi</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="">{t("all")}</option>
+              <option value="critical">{t("critical")}</option>
+              <option value="high">{t("high")}</option>
+              <option value="medium">{t("medium")}</option>
+              <option value="low">{t("low")}</option>
             </select>
           </div>
           <div className="min-w-[160px]">
-            <label className="mb-1 block text-xs font-medium text-surface-500">Tur</label>
+            <label className="mb-1 block text-xs font-medium text-surface-500">{t("type")}</label>
             <select
               value={eventType}
               onChange={(e) => setEventType(e.target.value)}
               className="input"
             >
-              <option value="">Barchasi</option>
-              <option value="advertisement">Reklama</option>
-              <option value="security_threat">Security threat</option>
+              <option value="">{t("all")}</option>
+              <option value="advertisement">{t("advertisement")}</option>
+              <option value="security_threat">{t("security_threat")}</option>
             </select>
           </div>
         </div>
@@ -103,11 +105,11 @@ export function EventsPage() {
               <thead>
                 <tr className="border-b border-surface-200 text-surface-500">
                   <th className="pb-3 font-medium">#</th>
-                  <th className="pb-3 font-medium">Tur</th>
-                  <th className="pb-3 font-medium">Daraja</th>
-                  <th className="pb-3 font-medium">Ball</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Vaqt</th>
+                  <th className="pb-3 font-medium">{t("type")}</th>
+                  <th className="pb-3 font-medium">{t("severity")}</th>
+                  <th className="pb-3 font-medium">{t("score")}</th>
+                  <th className="pb-3 font-medium">{t("status")}</th>
+                  <th className="pb-3 font-medium">{t("time")}</th>
                   <th className="pb-3 font-medium" />
                 </tr>
               </thead>
@@ -132,7 +134,7 @@ export function EventsPage() {
                     </td>
                     <td className="py-3">
                       <Link to={`/events/${event.id}`} className="link text-xs">
-                        Batafsil
+                        {t("details")}
                       </Link>
                     </td>
                   </tr>

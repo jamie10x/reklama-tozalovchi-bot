@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useUsers } from "../api/queries";
 import { useDebounce } from "../hooks/useDebounce";
+import { useI18n } from "../i18n";
 
 export function UsersPage() {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 400);
 
@@ -11,8 +13,8 @@ export function UsersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-surface-900">Foydalanuvchilar</h2>
-        <p className="mt-1 text-sm text-surface-500">Kuzatilgan foydalanuvchilar</p>
+        <h2 className="text-2xl font-bold text-surface-900">{t("users")}</h2>
+        <p className="mt-1 text-sm text-surface-500">{t("users_desc")}</p>
       </div>
 
       <div className="card mb-6">
@@ -20,7 +22,7 @@ export function UsersPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="input max-w-md"
-          placeholder="Foydalanuvchi nomi yoki ID orqali qidirish..."
+          placeholder={t("search_users_placeholder")}
         />
       </div>
 
@@ -37,11 +39,11 @@ export function UsersPage() {
               <thead>
                 <tr className="border-b border-surface-200 text-surface-500">
                   <th className="pb-3 font-medium">ID</th>
-                  <th className="pb-3 font-medium">Username</th>
-                  <th className="pb-3 font-medium">Ism</th>
-                  <th className="pb-3 font-medium">Bot</th>
-                  <th className="pb-3 font-medium">Risk</th>
-                  <th className="pb-3 font-medium">So'ngi faollik</th>
+                  <th className="pb-3 font-medium">{t("username")}</th>
+                  <th className="pb-3 font-medium">{t("name")}</th>
+                  <th className="pb-3 font-medium">{t("bot")}</th>
+                  <th className="pb-3 font-medium">{t("risk")}</th>
+                  <th className="pb-3 font-medium">{t("last_activity")}</th>
                 </tr>
               </thead>
               <tbody>

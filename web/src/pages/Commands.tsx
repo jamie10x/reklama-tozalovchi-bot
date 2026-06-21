@@ -11,22 +11,23 @@ import { useI18n } from "../i18n";
 
 const actions: {
   value: EnforcementActionType;
-  label: string;
+  labelKey: string;
   scope: "group" | "message" | "member" | "intel";
-  requires: string;
+  requiresKey: string;
 }[] = [
-  { value: "refresh_group_permissions", label: "Refresh permissions", scope: "group", requires: "Chat ID" },
-  { value: "get_chat_info", label: "Get chat info", scope: "intel", requires: "Chat ID" },
-  { value: "get_chat_administrators", label: "Get administrators", scope: "intel", requires: "Chat ID" },
-  { value: "get_chat_member_count", label: "Get member count", scope: "intel", requires: "Chat ID" },
-  { value: "save_observed_state", label: "Save observed state", scope: "group", requires: "Chat ID" },
-  { value: "delete_message", label: "Delete message", scope: "message", requires: "Chat ID + Message ID" },
-  { value: "refresh_member", label: "Refresh member", scope: "member", requires: "Chat ID + User ID" },
-  { value: "trust_sender", label: "Trust sender", scope: "member", requires: "Chat ID + User ID" },
-  { value: "restrict_member", label: "Restrict member", scope: "member", requires: "Chat ID + User ID" },
-  { value: "mute_member", label: "Mute member for 1 hour", scope: "member", requires: "Chat ID + User ID" },
-  { value: "ban_member", label: "Ban member", scope: "member", requires: "Chat ID + User ID" },
-  { value: "get_user_profile_photos", label: "Profile photo metadata", scope: "intel", requires: "User ID" },
+  { value: "refresh_group_permissions", labelKey: "refresh_permissions", scope: "group", requiresKey: "chat_id" },
+  { value: "get_chat_info", labelKey: "get_chat_info", scope: "intel", requiresKey: "chat_id" },
+  { value: "get_chat_administrators", labelKey: "get_chat_administrators", scope: "intel", requiresKey: "chat_id" },
+  { value: "get_chat_member_count", labelKey: "get_chat_member_count", scope: "intel", requiresKey: "chat_id" },
+  { value: "send_recent_messages", labelKey: "send_recent_messages", scope: "intel", requiresKey: "chat_id" },
+  { value: "save_observed_state", labelKey: "save_observed_state", scope: "group", requiresKey: "chat_id" },
+  { value: "delete_message", labelKey: "delete_message", scope: "message", requiresKey: "chat_message_id" },
+  { value: "refresh_member", labelKey: "refresh_member", scope: "member", requiresKey: "chat_user_id" },
+  { value: "trust_sender", labelKey: "trust_sender", scope: "member", requiresKey: "chat_user_id" },
+  { value: "restrict_member", labelKey: "restrict_member", scope: "member", requiresKey: "chat_user_id" },
+  { value: "mute_member", labelKey: "mute_member", scope: "member", requiresKey: "chat_user_id" },
+  { value: "ban_member", labelKey: "ban_member", scope: "member", requiresKey: "chat_user_id" },
+  { value: "get_user_profile_photos", labelKey: "fetch_profile_photos", scope: "intel", requiresKey: "user_id" },
 ];
 
 function parseOptionalInt(value: string): number | undefined {
@@ -42,7 +43,7 @@ function textValue(value: unknown) {
   return JSON.stringify(value);
 }
 
-function summarizeResult(result: Record<string, unknown> | null) {
+function summarizeResult(result: Record<string, unknown> | null, t: (key: string) => string) {
   if (!result) return [];
   const chat = result.chat as Record<string, unknown> | undefined;
   const pinned = chat?.pinned_message as Record<string, unknown> | undefined;
@@ -52,23 +53,23 @@ function summarizeResult(result: Record<string, unknown> | null) {
   const rows: Array<[string, unknown]> = [];
 
   if (chat) {
-    rows.push(["Title", chat.title]);
-    rows.push(["Username", chat.username ? `@${chat.username}` : undefined]);
-    rows.push(["Type", chat.type]);
-    rows.push(["Chat ID", chat.id]);
-    rows.push(["Invite", chat.invite_link]);
-    rows.push(["Visible history", chat.has_visible_history]);
-    rows.push(["Hidden members", chat.has_hidden_members]);
-    rows.push(["Aggressive anti-spam", chat.has_aggressive_anti_spam_enabled]);
-    rows.push(["Permissions", permissions ? Object.values(permissions).filter(Boolean).length : undefined]);
-    rows.push(["Pinned message", pinned?.text]);
+    rows.push([t("title"), chat.title]);
+    rows.push([t("username"), chat.username ? `@${chat.username}` : undefined]);
+    rows.push([t("type"), chat.type]);
+    rows.push([t("chat_id"), chat.id]);
+    rows.push([t("invite"), chat.invite_link]);
+    rows.push([t("visible_history"), chat.has_visible_history]);
+    rows.push([t("hidden_members"), chat.has_hidden_members]);
+    rows.push([t("aggressive_antispam"), chat.has_aggressive_anti_spam_enabled]);
+    rows.push([t("permissions"), permissions ? Object.values(permissions).filter(Boolean).length : undefined]);
+    rows.push([t("pinned_message"), pinned?.text]);
   }
 
-  if (typeof result.member_count === "number") rows.push(["Member count", result.member_count]);
-  if (administrators) rows.push(["Administrators", administrators.length]);
-  if (photos) rows.push(["Photo groups", photos.length]);
-  if (result.status) rows.push(["Status", result.status]);
-  if (result.can_delete_messages !== undefined) rows.push(["Can delete messages", result.can_delete_messages]);
+  if (typeof result.member_count === "number") rows.push([t("member_count"), result.member_count]);
+  if (administrators) rows.push([t("administrators"), administrators.length]);
+  if (photos) rows.push([t("photo_groups"), photos.length]);
+  if (result.status) rows.push([t("status"), result.status]);
+  if (result.can_delete_messages !== undefined) rows.push([t("can_delete_messages"), result.can_delete_messages]);
   if (rows.length === 0) {
     Object.entries(result).slice(0, 8).forEach(([key, value]) => rows.push([key, value]));
   }
@@ -78,7 +79,7 @@ function summarizeResult(result: Record<string, unknown> | null) {
 function CommandResultWindow({ item }: { item?: EnforcementAction }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const summary = useMemo(() => summarizeResult(item?.result ?? null), [item]);
+  const summary = useMemo(() => summarizeResult(item?.result ?? null, t), [item, t]);
   const json = useMemo(() => JSON.stringify(item?.result ?? {}, null, 2), [item]);
 
   useEffect(() => setCopied(false), [item?.id]);
@@ -113,12 +114,12 @@ function CommandResultWindow({ item }: { item?: EnforcementAction }) {
 
       {(item.status === "pending" || item.status === "claimed") && (
         <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-          Command is queued. This result window refreshes automatically until the bot marks it completed or failed.
+          {t("command_pending_refresh")}
         </div>
       )}
       {item.status === "failed" && item.result && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          Command failed. The raw JSON panel below contains the Telegram/API error details.
+          {t("command_failed_details")}
         </div>
       )}
 
@@ -130,8 +131,8 @@ function CommandResultWindow({ item }: { item?: EnforcementAction }) {
             <KeyValue label={t("chat_id")} value={<span className="font-mono">{item.target_chat_id ?? "-"}</span>} />
             <KeyValue label={t("user_id")} value={<span className="font-mono">{item.target_user_id ?? "-"}</span>} />
             <KeyValue label={t("message_id")} value={<span className="font-mono">{item.target_message_id ?? "-"}</span>} />
-            <KeyValue label="Queued" value={relativeTime(item.created_at)} />
-            <KeyValue label="Completed" value={relativeTime(item.completed_at)} />
+            <KeyValue label={t("queued")} value={relativeTime(item.created_at)} />
+            <KeyValue label={t("completed")} value={relativeTime(item.completed_at)} />
           </div>
 
           <div className="rounded-lg border border-surface-200 p-4">
@@ -214,7 +215,7 @@ export function CommandsPage() {
     <div>
       <PageHeader
         title={t("bot_commands")}
-        description="Queue Telegram Bot API actions. Commands execute only where the bot has authorized access and permissions."
+        description={t("commands_desc")}
       />
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
@@ -227,7 +228,7 @@ export function CommandsPage() {
                 className={actionType === action.value ? "btn-primary justify-start px-3" : "btn-secondary justify-start px-3"}
                 onClick={() => setActionType(action.value)}
               >
-                {action.label}
+                {t(action.labelKey)}
               </button>
             ))}
           </div>
@@ -241,7 +242,7 @@ export function CommandsPage() {
             >
               {actions.map((action) => (
                 <option key={action.value} value={action.value}>
-                  {action.label}
+                  {t(action.labelKey)}
                 </option>
               ))}
             </select>
@@ -250,8 +251,8 @@ export function CommandsPage() {
           <div className="rounded-lg border border-surface-200 bg-surface-50 p-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-surface-900">{selectedAction.label}</p>
-                <p className="text-xs text-surface-500">{t("required")}: {selectedAction.requires}</p>
+                <p className="text-sm font-semibold text-surface-900">{t(selectedAction.labelKey)}</p>
+                <p className="text-xs text-surface-500">{t("required")}: {t(selectedAction.requiresKey)}</p>
               </div>
               <Badge value={selectedAction.scope} />
             </div>
@@ -289,7 +290,7 @@ export function CommandsPage() {
               {t("queue_command")}
             </button>
             {result && <span className="text-sm text-green-700">{result}</span>}
-            {createAction.error && <span className="text-sm text-red-700">Command rejected</span>}
+            {createAction.error && <span className="text-sm text-red-700">{t("command_rejected")}</span>}
           </div>
         </form>
 

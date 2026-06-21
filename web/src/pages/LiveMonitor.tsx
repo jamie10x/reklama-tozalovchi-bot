@@ -9,16 +9,18 @@ import {
   useLiveActivity,
 } from "../api/queries";
 import { EmptyState, MessageInfoCard, PageHeader, SkeletonRows } from "../components/soc";
+import { useI18n } from "../i18n";
 
 const filters = [
-  { value: "", label: "All statuses" },
-  { value: "security_threat", label: "Security threat" },
-  { value: "advertisement", label: "Advertisement" },
-  { value: "ai_review", label: "AI review" },
-  { value: "clean", label: "Clean" },
+  { value: "", labelKey: "all" },
+  { value: "security_threat", labelKey: "security_threat" },
+  { value: "advertisement", labelKey: "advertisement" },
+  { value: "ai_review", labelKey: "ai_review" },
+  { value: "clean", labelKey: "clean" },
 ];
 
 export function LiveMonitorPage() {
+  const { t } = useI18n();
   const { data: groups } = useGroups();
   const [chatId, setChatId] = useState<number | undefined>();
   const [status, setStatus] = useState("");
@@ -72,15 +74,15 @@ export function LiveMonitorPage() {
   return (
     <div>
       <PageHeader
-        title="Live Triage"
-        description="Auto-refreshing queue for suspicious Telegram activity and rapid response commands."
+        title={t("live_triage")}
+        description={t("live_triage_desc")}
         action={
           <div className="flex gap-2">
             <Link to="/activity" className="btn-secondary">
-              Activity store
+              {t("activity_store")}
             </Link>
             <Link to="/commands" className="btn-primary">
-              Command console
+              {t("bot_commands")}
             </Link>
           </div>
         }
@@ -88,13 +90,13 @@ export function LiveMonitorPage() {
 
       <div className="card mb-6 grid gap-4 md:grid-cols-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-surface-500">Group</label>
+          <label className="mb-1 block text-xs font-medium text-surface-500">{t("group")}</label>
           <select
             className="input"
             value={chatId ?? ""}
             onChange={(event) => setChatId(event.target.value ? Number(event.target.value) : undefined)}
           >
-            <option value="">All groups</option>
+            <option value="">{t("all_groups")}</option>
             {groups?.items.map((group) => (
               <option key={group.telegram_chat_id} value={group.telegram_chat_id}>
                 {group.title || group.telegram_chat_id}
@@ -103,26 +105,26 @@ export function LiveMonitorPage() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-surface-500">Status</label>
+          <label className="mb-1 block text-xs font-medium text-surface-500">{t("status")}</label>
           <select className="input" value={status} onChange={(event) => setStatus(event.target.value)}>
             {filters.map((filter) => (
               <option key={filter.value} value={filter.value}>
-                {filter.label}
+                {t(filter.labelKey)}
               </option>
             ))}
           </select>
         </div>
         <div className="rounded-lg border border-surface-200 p-3">
-          <p className="text-xs font-medium uppercase text-surface-500">Queue</p>
+          <p className="text-xs font-medium uppercase text-surface-500">{t("queue")}</p>
           <p className="mt-1 text-2xl font-bold text-surface-900">{messages.length}</p>
-          <p className="text-xs text-surface-500">refreshes every 5 seconds</p>
+          <p className="text-xs text-surface-500">{t("auto_refresh_5s")}</p>
         </div>
       </div>
 
       {lastAction && <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{lastAction}</div>}
       {(command.error || createCase.error) && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          Action could not be queued. Check target IDs and bot permissions.
+          {t("action_queue_failed")}
         </div>
       )}
 
@@ -143,28 +145,28 @@ export function LiveMonitorPage() {
                           disabled={command.isPending}
                           onClick={() => runCommand(message, "delete_message")}
                         >
-                          Delete
+                          {t("delete_message")}
                         </button>
                         <button
                           className="btn-secondary px-2"
                           disabled={command.isPending || !message.sender_id}
                           onClick={() => runCommand(message, "trust_sender")}
                         >
-                          Trust
+                          {t("trust_sender")}
                         </button>
                         <button
                           className="btn-secondary px-2"
                           disabled={command.isPending || !message.sender_id}
                           onClick={() => runCommand(message, "mute_member")}
                         >
-                          Mute
+                          {t("mute_member")}
                         </button>
                         <button
                           className="btn-danger px-2"
                           disabled={command.isPending || !message.sender_id}
                           onClick={() => runCommand(message, "ban_member")}
                         >
-                          Ban
+                          {t("ban_member")}
                         </button>
                       </div>
                       <button
@@ -172,7 +174,7 @@ export function LiveMonitorPage() {
                         disabled={createCase.isPending}
                         onClick={() => escalate(message)}
                       >
-                        Create case
+                        {t("case_created")}
                       </button>
                   </div>
                 }
@@ -181,9 +183,9 @@ export function LiveMonitorPage() {
           </div>
         ) : (
           <EmptyState
-            title="No live triage items"
-            description="Flagged messages appear here after the bot receives future group updates. Clean messages are stored in Activity if capture settings allow it."
-            action={<Link to="/groups" className="btn-secondary">Check group health</Link>}
+            title={t("no_live_triage")}
+            description={t("no_live_triage_desc")}
+            action={<Link to="/groups" className="btn-secondary">{t("group_health")}</Link>}
           />
         )}
       </div>

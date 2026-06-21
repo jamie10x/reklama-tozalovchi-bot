@@ -33,7 +33,7 @@ export function Header() {
           ))}
         </div>
         <span className="text-sm text-surface-500">
-          {officer?.display_name || officer?.role || "Officer"}
+          {officer?.display_name || officer?.role || t("officer")}
         </span>
         <button onClick={logout} className="btn-ghost text-sm">
           {t("logout")}

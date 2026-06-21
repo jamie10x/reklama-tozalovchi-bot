@@ -11,16 +11,19 @@ import {
   useUpdateCaptureSettings,
 } from "../api/queries";
 import { Badge, EmptyState, KeyValue, PageHeader, RiskMeter, SkeletonRows, relativeTime } from "../components/soc";
+import { useI18n } from "../i18n";
 
-const groupCommands: { action: EnforcementActionType; label: string }[] = [
-  { action: "refresh_group_permissions", label: "Refresh permissions" },
-  { action: "get_chat_info", label: "Get chat info" },
-  { action: "get_chat_administrators", label: "Get admins" },
-  { action: "get_chat_member_count", label: "Member count" },
-  { action: "save_observed_state", label: "Save state" },
+const groupCommands: { action: EnforcementActionType; labelKey: string }[] = [
+  { action: "refresh_group_permissions", labelKey: "refresh_permissions" },
+  { action: "get_chat_info", labelKey: "get_chat_info" },
+  { action: "get_chat_administrators", labelKey: "get_chat_administrators" },
+  { action: "get_chat_member_count", labelKey: "get_chat_member_count" },
+  { action: "send_recent_messages", labelKey: "send_recent_messages" },
+  { action: "save_observed_state", labelKey: "save_observed_state" },
 ];
 
 export function GroupDetailPage() {
+  const { t } = useI18n();
   const params = useParams<{ chatId: string }>();
   const chatId = Number(params.chatId);
   const { data: group, isLoading: groupLoading } = useGroup(chatId);
@@ -84,15 +87,15 @@ export function GroupDetailPage() {
   return (
     <div>
       <PageHeader
-        title={group?.title || `Group ${chatId}`}
-        description="Operational profile for bot permissions, capture policy, observed messages, and response commands."
+        title={group?.title || `${t("group")} ${chatId}`}
+        description={t("group_detail_desc")}
         action={
           <div className="flex gap-2">
             <Link to="/groups" className="btn-secondary">
-              Back to groups
+              {t("back_to_groups")}
             </Link>
             <Link to={`/activity?chat_id=${chatId}`} className="btn-primary">
-              Open activity
+              {t("open_activity")}
             </Link>
           </div>
         }
@@ -102,31 +105,31 @@ export function GroupDetailPage() {
         <div className="space-y-6">
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Bot Capability</h3>
+              <h3 className="card-title">{t("bot_capability")}</h3>
             </div>
             {groupLoading ? (
               <SkeletonRows rows={4} />
             ) : group ? (
               <div>
                 <KeyValue label="Chat ID" value={<span className="font-mono">{group.telegram_chat_id}</span>} />
-                <KeyValue label="Username" value={group.username ? `@${group.username}` : "-"} />
-                <KeyValue label="Protection mode" value={<Badge value={group.mode} />} />
-                <KeyValue label="Group enabled" value={<Badge value={group.enabled ? "enabled" : "disabled"} />} />
+                <KeyValue label={t("username")} value={group.username ? `@${group.username}` : "-"} />
+                <KeyValue label={t("protection_mode")} value={<Badge value={group.mode} />} />
+                <KeyValue label={t("group_enabled")} value={<Badge value={group.enabled ? t("enabled") : t("disabled")} />} />
                 <KeyValue
-                  label="Delete messages"
-                  value={<Badge value={group.bot_can_delete_messages ? "ready" : "missing"} tone={group.bot_can_delete_messages ? "badge-low" : "badge-critical"} />}
+                  label={t("delete_messages")}
+                  value={<Badge value={group.bot_can_delete_messages ? t("ready") : t("missing")} tone={group.bot_can_delete_messages ? "badge-low" : "badge-critical"} />}
                 />
               </div>
             ) : (
-              <EmptyState title="Group not found" description="The public bot database has no matching group row." />
+              <EmptyState title={t("group_not_found")} description={t("group_not_found_desc")} />
             )}
           </div>
 
           <div className="card">
             <div className="card-header">
               <div>
-                <h3 className="card-title">Capture Policy</h3>
-                <p className="text-xs text-surface-500">Controls what future messages can store</p>
+                <h3 className="card-title">{t("capture_policy")}</h3>
+                <p className="text-xs text-surface-500">{t("capture_policy_desc")}</p>
               </div>
               <Badge value={settings?.enabled ? "enabled" : "disabled"} />
             </div>
@@ -143,14 +146,15 @@ export function GroupDetailPage() {
               ))}
             </div>
             <p className="mt-3 text-xs text-surface-500">
-              Full text should be used only when the group owner authorizes evidence retention.
+              {t("full_text_policy_note")}
             </p>
           </div>
 
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Group Commands</h3>
+              <h3 className="card-title">{t("group_commands")}</h3>
             </div>
+            <p className="mb-3 text-xs text-surface-500">{t("export_recent_messages_desc")}</p>
             <div className="grid gap-2">
               {groupCommands.map((item) => (
                 <button
@@ -159,7 +163,7 @@ export function GroupDetailPage() {
                   disabled={command.isPending}
                   onClick={() => runCommand(item.action)}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </button>
               ))}
             </div>
@@ -174,7 +178,7 @@ export function GroupDetailPage() {
                 </div>
                 {(latestCommand.status === "pending" || latestCommand.status === "claimed") && (
                   <p className="mt-2 text-xs text-surface-500">
-                    Waiting for the bot worker. This card refreshes automatically.
+                    {t("waiting_bot_worker")}
                   </p>
                 )}
                 {latestCommand.result && (
@@ -183,26 +187,26 @@ export function GroupDetailPage() {
                   </pre>
                 )}
                 <Link to="/commands" className="btn-secondary mt-3 w-full px-2 py-1.5">
-                  Open full result window
+                  {t("open_full_result_window")}
                 </Link>
               </div>
             )}
-            {command.error && <p className="mt-3 text-sm text-red-700">Command could not be queued.</p>}
+            {command.error && <p className="mt-3 text-sm text-red-700">{t("command_could_not_queue")}</p>}
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="card">
-              <p className="stat-label">Observed messages</p>
+              <p className="stat-label">{t("observed_messages")}</p>
               <p className="stat-value mt-2">{messages?.total ?? 0}</p>
             </div>
             <div className="card">
-              <p className="stat-label">Flagged messages</p>
+              <p className="stat-label">{t("flagged_messages")}</p>
               <p className="stat-value mt-2 text-orange-600">{flagged.length}</p>
             </div>
             <div className="card">
-              <p className="stat-label">Last activity</p>
+              <p className="stat-label">{t("last_activity")}</p>
               <p className="mt-3 text-lg font-semibold text-surface-900">
                 {relativeTime(messages?.items[0]?.created_at)}
               </p>
@@ -211,9 +215,9 @@ export function GroupDetailPage() {
 
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Recent Activity</h3>
+              <h3 className="card-title">{t("recent_activity")}</h3>
               <Link to="/monitor" className="link text-sm">
-                Live triage
+                {t("live_triage_link")}
               </Link>
             </div>
             {messagesLoading ? (
@@ -230,7 +234,7 @@ export function GroupDetailPage() {
                           <span className="text-xs text-surface-500">{relativeTime(message.created_at)}</span>
                         </div>
                         <p className="mt-2 text-sm text-surface-800">
-                          {message.text || (message.has_text ? "Text hidden by capture policy" : "No message text")}
+                          {message.text || (message.has_text ? t("capture_policy_hidden") : t("no_message_text"))}
                         </p>
                         <p className="mt-1 font-mono text-xs text-surface-500">
                           user={message.sender_id ?? "-"} {message.sender_username ? `@${message.sender_username}` : ""}
@@ -245,15 +249,15 @@ export function GroupDetailPage() {
               </div>
             ) : (
               <EmptyState
-                title="No observed messages yet"
-                description="The bot only captures messages it receives after being added to the group. If the group is quiet, this panel stays empty."
+                title={t("no_data_yet")}
+                description={t("old_history_limit")}
               />
             )}
           </div>
 
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Top Observed Members</h3>
+              <h3 className="card-title">{t("top_observed_members")}</h3>
             </div>
             {topSenders.length ? (
               <div className="space-y-3">
@@ -265,17 +269,17 @@ export function GroupDetailPage() {
                   >
                     <div>
                       <p className="font-mono text-sm font-semibold text-surface-900">{sender.id}</p>
-                      <p className="text-xs text-surface-500">{sender.username ? `@${sender.username}` : "No username"}</p>
+                      <p className="text-xs text-surface-500">{sender.username ? `@${sender.username}` : t("no_username")}</p>
                     </div>
                     <div className="text-right text-xs text-surface-500">
-                      <p>{sender.count} messages</p>
-                      <p>{sender.flagged} flagged</p>
+                      <p>{sender.count} {t("messages")}</p>
+                      <p>{sender.flagged} {t("flagged")}</p>
                     </div>
                   </Link>
                 ))}
               </div>
             ) : (
-              <EmptyState title="No member activity yet" />
+              <EmptyState title={t("no_member_activity")} />
             )}
           </div>
         </div>

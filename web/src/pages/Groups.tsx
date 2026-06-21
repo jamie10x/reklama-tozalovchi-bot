@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useCreateEnforcementAction, useGroups } from "../api/queries";
 import { Badge, EmptyState, PageHeader, SkeletonRows } from "../components/soc";
+import { useI18n } from "../i18n";
 
 function readiness(group: { enabled: boolean; bot_can_delete_messages: boolean }) {
   if (!group.enabled) return { label: "disabled", tone: "badge-info" };
@@ -9,6 +10,7 @@ function readiness(group: { enabled: boolean; bot_can_delete_messages: boolean }
 }
 
 export function GroupsPage() {
+  const { t } = useI18n();
   const { data, isLoading, error } = useGroups();
   const command = useCreateEnforcementAction();
 
@@ -22,11 +24,11 @@ export function GroupsPage() {
   return (
     <div>
       <PageHeader
-        title="Group Health"
-        description="Bot permissions, protection mode, and operational readiness for every authorized group."
+        title={t("group_health")}
+        description={t("group_health_desc")}
         action={
           <Link to="/commands" className="btn-primary">
-            Bot commands
+            {t("bot_commands_short")}
           </Link>
         }
       />
@@ -39,17 +41,17 @@ export function GroupsPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="card">
-          <p className="stat-label">Registered groups</p>
+          <p className="stat-label">{t("registered_groups")}</p>
           <p className="stat-value mt-2">{data?.total ?? 0}</p>
         </div>
         <div className="card">
-          <p className="stat-label">Ready to moderate</p>
+          <p className="stat-label">{t("ready_to_moderate")}</p>
           <p className="stat-value mt-2 text-green-600">
             {data?.items.filter((group) => group.bot_can_delete_messages).length ?? 0}
           </p>
         </div>
         <div className="card">
-          <p className="stat-label">Need permission fix</p>
+          <p className="stat-label">{t("need_permission_fix")}</p>
           <p className="stat-value mt-2 text-red-600">
             {data?.items.filter((group) => group.enabled && !group.bot_can_delete_messages).length ?? 0}
           </p>
@@ -69,7 +71,7 @@ export function GroupsPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="truncate text-base font-semibold text-surface-900">
-                          {group.title || "Untitled group"}
+                          {group.title || t("untitled_group")}
                         </h3>
                         <Badge value={state.label} tone={state.tone} />
                       </div>
@@ -81,15 +83,15 @@ export function GroupsPage() {
 
                   <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
                     <div className="rounded-lg bg-surface-50 p-3">
-                      <p className="text-xs text-surface-500">Monitoring</p>
-                      <p className="mt-1 font-semibold text-surface-900">{group.enabled ? "Enabled" : "Disabled"}</p>
+                      <p className="text-xs text-surface-500">{t("monitoring")}</p>
+                      <p className="mt-1 font-semibold text-surface-900">{group.enabled ? t("enabled") : t("disabled")}</p>
                     </div>
                     <div className="rounded-lg bg-surface-50 p-3">
-                      <p className="text-xs text-surface-500">Delete permission</p>
-                      <p className="mt-1 font-semibold text-surface-900">{group.bot_can_delete_messages ? "Available" : "Missing"}</p>
+                      <p className="text-xs text-surface-500">{t("delete_permission")}</p>
+                      <p className="mt-1 font-semibold text-surface-900">{group.bot_can_delete_messages ? t("available") : t("missing")}</p>
                     </div>
                     <div className="rounded-lg bg-surface-50 p-3">
-                      <p className="text-xs text-surface-500">Added</p>
+                      <p className="text-xs text-surface-500">{t("added")}</p>
                       <p className="mt-1 font-semibold text-surface-900">
                         {new Date(group.created_at).toLocaleDateString("uz-UZ")}
                       </p>
@@ -98,17 +100,17 @@ export function GroupsPage() {
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link to={`/groups/${group.telegram_chat_id}`} className="btn-primary">
-                      Open operations
+                      {t("open_operations")}
                     </Link>
                     <button
                       className="btn-secondary"
                       disabled={command.isPending}
                       onClick={() => refresh(group.telegram_chat_id)}
                     >
-                      Refresh permissions
+                      {t("refresh_permissions")}
                     </button>
                     <Link to={`/activity?chat_id=${group.telegram_chat_id}`} className="btn-ghost">
-                      Activity
+                      {t("activity_store")}
                     </Link>
                   </div>
                 </div>
@@ -117,9 +119,9 @@ export function GroupsPage() {
           </div>
         ) : (
           <EmptyState
-            title="No groups visible"
-            description="If the bot is already in a Telegram group, send a test message there and refresh permissions. Telegram history cannot be imported retroactively."
-            action={<Link to="/commands" className="btn-secondary">Open bot commands</Link>}
+            title={t("no_groups_visible")}
+            description={t("no_groups_desc")}
+            action={<Link to="/commands" className="btn-secondary">{t("bot_commands_short")}</Link>}
           />
         )}
       </div>
