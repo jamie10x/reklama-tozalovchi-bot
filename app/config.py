@@ -11,12 +11,17 @@ class Settings(BaseSettings):
     bot_token: str
 
     database_url: str = "postgresql+asyncpg://adcleaner:change_me@postgres:5432/adcleaner"
+    secadmin_database_url: str = (
+        "postgresql+asyncpg://secadmin_api:change_me@postgres:5432/adcleaner"
+    )
 
     postgres_db: str = "adcleaner"
     postgres_user: str = "adcleaner"
     postgres_password: str = "change_me"
 
     log_level: str = "INFO"
+    log_format: str = "json"
+    bot_language: str = "uz"
     default_mode: str = "normal"
     deletion_log_retention_hours: int = 24
     cleanup_interval_minutes: int = 30

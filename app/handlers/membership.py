@@ -1,13 +1,13 @@
-import logging
-
 from aiogram import Router, types
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, KICKED, ChatMemberUpdatedFilter
 
 from app.bot.keyboards import add_to_group_keyboard
+from app.core.logging import get_logger
 from app.database.repositories.chats import ChatRepository
+from app.i18n import I18n
 from app.services.permissions import bot_can_delete_messages
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = Router()
 
@@ -47,9 +47,9 @@ async def _register_or_update_chat(
             owner_user_id=owner_id,
             linked_chat_id=linked_chat_id,
         )
-        logger.info("Bot added to chat_id=%d title=%r", chat.id, chat.title)
+        logger.info("Bot added to chat", chat_id=chat.id, title=chat.title)
     else:
-        logger.info("Bot already registered: chat_id=%d title=%r", chat.id, chat.title)
+        logger.info("Bot already registered", chat_id=chat.id, title=chat.title)
 
     can_delete = await bot_can_delete_messages(bot, chat.id)
     await repo.set_bot_permission(chat.id, can_delete)
@@ -62,22 +62,35 @@ async def bot_added_to_group(event: types.ChatMemberUpdated, session=None) -> No
     repo = ChatRepository(session)
     can_delete = await _register_or_update_chat(event, repo)
 
+    i18n: I18n | None = event.get("i18n")
+
     if can_delete:
-        await event.bot.send_message(
-            event.chat.id,
-            "✅ AdCleaner is now active. "
-            "Unauthorized advertisements will be deleted automatically.\n\n"
-            "An administrator can use /mode to change the protection level "
-            "or /off to disable protection.",
+        text = (
+            i18n.t("membership.bot_added_can_delete")
+            if i18n
+            else (
+                "AdCleaner is now active. "
+                "Unauthorized advertisements will be deleted automatically.\n\n"
+                "An administrator can use /mode to change the protection level "
+                "or /off to disable protection."
+            )
         )
+        await event.bot.send_message(event.chat.id, text)
     else:
         bot_me = await event.bot.me()
+        text = (
+            i18n.t("membership.bot_added_no_permission")
+            if i18n
+            else (
+                "AdCleaner cannot remove advertisements because it does not have "
+                "permission to delete messages.\n\n"
+                "Grant the bot administrator access with the <i>Delete messages</i> permission."
+            )
+        )
         await event.bot.send_message(
             event.chat.id,
-            "⚠️ AdCleaner cannot remove advertisements because it does not have "
-            "permission to delete messages.\n\n"
-            "Grant the bot administrator access with the <i>Delete messages</i> permission.",
-            reply_markup=add_to_group_keyboard(bot_me.username or ""),
+            text,
+            reply_markup=add_to_group_keyboard(bot_me.username or "", i18n),
         )
 
 
@@ -85,33 +98,40 @@ async def bot_added_to_group(event: types.ChatMemberUpdated, session=None) -> No
 async def bot_removed_from_group(event: types.ChatMemberUpdated, session=None) -> None:
     repo = ChatRepository(session)
     await repo.mark_removed(event.chat.id)
-    logger.info("Bot removed: chat_id=%d title=%r", event.chat.id, event.chat.title)
+    logger.info("Bot removed", chat_id=event.chat.id, title=event.chat.title)
 
 
 @router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))
 async def bot_left_group(event: types.ChatMemberUpdated, session=None) -> None:
     repo = ChatRepository(session)
     await repo.mark_removed(event.chat.id)
-    logger.info("Bot left: chat_id=%d title=%r", event.chat.id, event.chat.title)
+    logger.info("Bot left", chat_id=event.chat.id, title=event.chat.title)
 
 
 @router.my_chat_member()
 async def bot_permission_updated(event: types.ChatMemberUpdated, session=None) -> None:
     repo = ChatRepository(session)
     can_delete = await _register_or_update_chat(event, repo)
+    i18n: I18n | None = event.get("i18n")
+
     if can_delete:
-        await event.bot.send_message(
-            event.chat.id,
-            "✅ Delete permission granted. AdCleaner can now remove advertisements.",
+        text = (
+            i18n.t("membership.permission_granted")
+            if i18n
+            else ("Delete permission granted. AdCleaner can now remove advertisements.")
         )
+        await event.bot.send_message(event.chat.id, text)
     else:
-        await event.bot.send_message(
-            event.chat.id,
-            "⚠️ Delete permission removed. Advertisements will not be deleted.",
+        text = (
+            i18n.t("membership.permission_removed")
+            if i18n
+            else ("Delete permission removed. Advertisements will not be deleted.")
         )
+        await event.bot.send_message(event.chat.id, text)
+
     logger.info(
-        "Permission update: chat_id=%d title=%r can_delete=%s",
-        event.chat.id,
-        event.chat.title,
-        can_delete,
+        "Permission update",
+        chat_id=event.chat.id,
+        title=event.chat.title,
+        can_delete=can_delete,
     )

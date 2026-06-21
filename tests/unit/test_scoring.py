@@ -1,6 +1,5 @@
 import pytest
 
-from app.detector.models import DetectionResult
 from app.detector.scoring import THRESHOLDS, scoring_pipeline
 
 

@@ -109,9 +109,7 @@ class DetectionService:
             filtered_telegram.append(uname)
 
         if not filtered_urls and not filtered_telegram and not is_forwarded:
-            matched_phrases = PhraseMatcher.find_matches(
-                normalized, languages=SUPPORTED_LANGUAGES
-            )
+            matched_phrases = PhraseMatcher.find_matches(normalized, languages=SUPPORTED_LANGUAGES)
             if not matched_phrases:
                 return DetectionResult()
 

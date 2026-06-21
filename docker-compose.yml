@@ -21,6 +21,7 @@ services:
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-adcleaner}:${POSTGRES_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-adcleaner}
+      SECADMIN_DATABASE_URL: postgresql+asyncpg://${SECADMIN_API_USER:-secadmin_api}:${SECADMIN_API_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-adcleaner}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       DEFAULT_MODE: ${DEFAULT_MODE:-normal}
       DELETION_LOG_RETENTION_HOURS: ${DELETION_LOG_RETENTION_HOURS:-24}
@@ -29,6 +30,31 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-adcleaner}:${POSTGRES_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-adcleaner}
+      SECADMIN_DATABASE_URL: postgresql+asyncpg://${SECADMIN_API_USER:-secadmin_api}:${SECADMIN_API_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-adcleaner}
+      API_SECRET_KEY: ${API_SECRET_KEY:-change-me-in-production}
+      API_DEBUG: ${API_DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      dockerfile: Dockerfile.web
+    ports:
+      - "127.0.0.1:80:80"
+    depends_on:
+      - api
     restart: unless-stopped
 
 volumes:

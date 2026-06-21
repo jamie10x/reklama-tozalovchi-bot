@@ -1,8 +1,8 @@
 from app.detector.extractor import (
+    extract_entity_urls,
+    extract_mentions,
     extract_text,
     extract_urls,
-    extract_mentions,
-    extract_entity_urls,
 )
 
 

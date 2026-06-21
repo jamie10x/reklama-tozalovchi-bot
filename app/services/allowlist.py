@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.repositories.allowlist import AllowlistRepository
 from app.database.repositories.chats import ChatRepository
+from app.i18n import I18n
 
 
 @dataclass
@@ -38,18 +39,22 @@ def normalize_domain(value: str) -> str:
 
 
 class AllowlistService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, i18n: I18n | None = None) -> None:
         self._session = session
         self._repo = AllowlistRepository(session)
         self._chat_repo = ChatRepository(session)
+        self._i18n = i18n or I18n()
+
+    def _t(self, key: str, **kwargs: str) -> str:
+        return self._i18n.t(f"allowlist.{key}", **kwargs)
 
     async def add_user(self, chat_id: int, username: str, created_by: int) -> AllowlistAddResult:
         normalized = normalize_username(username)
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
-            return AllowlistAddResult(False, "Chat not found.")
+            return AllowlistAddResult(False, self._t("chat_not_found"))
         if await self._repo.exists(chat.id, "user", normalized):
-            return AllowlistAddResult(False, f"@{normalized} is already allowed.")
+            return AllowlistAddResult(False, self._t("already_exists", entity=f"@{normalized}"))
         await self._repo.add(
             chat_id=chat.id,
             entity_type="user",
@@ -57,7 +62,7 @@ class AllowlistService:
             display_name=f"@{normalized}",
             created_by_user_id=created_by,
         )
-        return AllowlistAddResult(True, f"@{normalized} has been allowed.")
+        return AllowlistAddResult(True, self._t("allowed", entity=f"@{normalized}"))
 
     async def add_user_by_id(
         self,
@@ -68,10 +73,10 @@ class AllowlistService:
     ) -> AllowlistAddResult:
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
-            return AllowlistAddResult(False, "Chat not found.")
+            return AllowlistAddResult(False, self._t("chat_not_found"))
         value = str(telegram_user_id)
         if await self._repo.exists(chat.id, "user", value):
-            return AllowlistAddResult(False, f"User {display_name} is already allowed.")
+            return AllowlistAddResult(False, self._t("already_exists", entity=display_name))
         await self._repo.add(
             chat_id=chat.id,
             entity_type="user",
@@ -80,15 +85,15 @@ class AllowlistService:
             display_name=display_name,
             created_by_user_id=created_by,
         )
-        return AllowlistAddResult(True, f"{display_name} has been allowed.")
+        return AllowlistAddResult(True, self._t("allowed", entity=display_name))
 
     async def add_bot(self, chat_id: int, bot_username: str, created_by: int) -> AllowlistAddResult:
         normalized = normalize_username(bot_username)
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
-            return AllowlistAddResult(False, "Chat not found.")
+            return AllowlistAddResult(False, self._t("chat_not_found"))
         if await self._repo.exists(chat.id, "bot", normalized):
-            return AllowlistAddResult(False, f"@{normalized} is already allowed.")
+            return AllowlistAddResult(False, self._t("already_exists", entity=f"@{normalized}"))
         await self._repo.add(
             chat_id=chat.id,
             entity_type="bot",
@@ -96,7 +101,7 @@ class AllowlistService:
             display_name=f"@{normalized}",
             created_by_user_id=created_by,
         )
-        return AllowlistAddResult(True, f"@{normalized} has been allowed.")
+        return AllowlistAddResult(True, self._t("allowed", entity=f"@{normalized}"))
 
     async def add_bot_by_id(
         self,
@@ -107,11 +112,11 @@ class AllowlistService:
     ) -> AllowlistAddResult:
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
-            return AllowlistAddResult(False, "Chat not found.")
+            return AllowlistAddResult(False, self._t("chat_not_found"))
         value = str(bot_user_id) if bot_username is None else normalize_username(bot_username)
         display = bot_username or f"bot_{bot_user_id}"
         if await self._repo.exists(chat.id, "bot", value):
-            return AllowlistAddResult(False, f"@{display} is already allowed.")
+            return AllowlistAddResult(False, self._t("already_exists", entity=f"@{display}"))
         await self._repo.add(
             chat_id=chat.id,
             entity_type="bot",
@@ -120,15 +125,15 @@ class AllowlistService:
             display_name=f"@{display}",
             created_by_user_id=created_by,
         )
-        return AllowlistAddResult(True, f"@{display} has been allowed.")
+        return AllowlistAddResult(True, self._t("allowed", entity=f"@{display}"))
 
     async def add_domain(self, chat_id: int, domain: str, created_by: int) -> AllowlistAddResult:
         normalized = normalize_domain(domain)
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
-            return AllowlistAddResult(False, "Chat not found.")
+            return AllowlistAddResult(False, self._t("chat_not_found"))
         if await self._repo.exists(chat.id, "domain", normalized):
-            return AllowlistAddResult(False, f"{normalized} is already allowed.")
+            return AllowlistAddResult(False, self._t("already_exists", entity=normalized))
         await self._repo.add(
             chat_id=chat.id,
             entity_type="domain",
@@ -136,7 +141,7 @@ class AllowlistService:
             display_name=normalized,
             created_by_user_id=created_by,
         )
-        return AllowlistAddResult(True, f"{normalized} has been allowed.")
+        return AllowlistAddResult(True, self._t("allowed", entity=normalized))
 
     async def add_telegram_chat(
         self, chat_id: int, tg_identifier: str, created_by: int
@@ -144,9 +149,9 @@ class AllowlistService:
         normalized = normalize_username(tg_identifier)
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
-            return AllowlistAddResult(False, "Chat not found.")
+            return AllowlistAddResult(False, self._t("chat_not_found"))
         if await self._repo.exists(chat.id, "telegram_chat", normalized):
-            return AllowlistAddResult(False, f"@{normalized} is already allowed.")
+            return AllowlistAddResult(False, self._t("already_exists", entity=f"@{normalized}"))
         await self._repo.add(
             chat_id=chat.id,
             entity_type="telegram_chat",
@@ -154,7 +159,7 @@ class AllowlistService:
             display_name=f"@{normalized}",
             created_by_user_id=created_by,
         )
-        return AllowlistAddResult(True, f"@{normalized} has been allowed.")
+        return AllowlistAddResult(True, self._t("allowed", entity=f"@{normalized}"))
 
     async def remove(self, chat_id: int, entity_type: str, value: str) -> AllowlistAddResult:
         if entity_type in ("user", "bot", "telegram_chat"):
@@ -163,19 +168,19 @@ class AllowlistService:
             normalized = normalize_domain(value)
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
-            return AllowlistAddResult(False, "Chat not found.")
+            return AllowlistAddResult(False, self._t("chat_not_found"))
         removed = await self._repo.remove(chat.id, entity_type, normalized)
         if removed:
-            return AllowlistAddResult(True, f"{value} has been removed from the allowlist.")
-        return AllowlistAddResult(False, f"{value} was not found in the allowlist.")
+            return AllowlistAddResult(True, self._t("removed", entity=value))
+        return AllowlistAddResult(False, self._t("not_found", entity=value))
 
     async def get_formatted_list(self, chat_id: int) -> str:
         chat = await self._chat_repo.get_by_telegram_id(chat_id)
         if chat is None:
-            return "Chat not found."
+            return self._t("chat_not_found")
         entities = await self._repo.get_all_for_chat(chat.id)
         if not entities:
-            return "No allowed entities configured."
+            return self._t("empty")
 
         icon_map = {
             "user": "👤",
@@ -183,9 +188,10 @@ class AllowlistService:
             "telegram_chat": "💬",
             "domain": "🌐",
         }
-        lines = ["<b>Allowed entities:</b>\n"]
+        lines = [self._t("title")]
         for e in entities:
             icon = icon_map.get(e.entity_type, "•")
+            type_name = self._t(f"types.{e.entity_type}", default=e.entity_type.capitalize())
             name = e.display_name or e.entity_value
-            lines.append(f"{icon} <b>{e.entity_type.capitalize()}:</b> {name}")
+            lines.append(self._t("item", icon=icon, type=type_name, name=name))
         return "\n".join(lines)

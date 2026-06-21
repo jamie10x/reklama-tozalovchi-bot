@@ -20,6 +20,21 @@ URL_PATTERN = re.compile(
 
 MENTION_PATTERN = re.compile(r"@[a-z][a-z0-9_]{4,31}", re.IGNORECASE)
 
+IPV4_PATTERN = re.compile(
+    r"(?<!\d)(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)"
+    r"(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}(?!\d)"
+)
+
+BTC_PATTERN = re.compile(r"\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b")
+ETH_PATTERN = re.compile(r"\b0x[a-fA-F0-9]{40}\b")
+TRX_PATTERN = re.compile(r"\bT[A-Za-z1-9]{33}\b")
+
+PHONE_PATTERN = re.compile(
+    r"(?<!\w)(?:\+\d{1,3}[-.\s]?)?\(?\d{1,4}\)?[-.\s]?\d{2,4}[-.\s]?\d{4,9}(?!\d)"
+)
+
+EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+
 
 def extract_text(
     text: str | None,
@@ -93,6 +108,52 @@ def extract_from_entities(
             result["has_spoiler"] = True
 
     return result
+
+
+def extract_ip_addresses(text: str) -> list[str]:
+    return IPV4_PATTERN.findall(text)
+
+
+def extract_crypto_wallets(text: str) -> dict[str, list[str]]:
+    wallets: dict[str, list[str]] = {}
+    btc = BTC_PATTERN.findall(text)
+    if btc:
+        wallets["btc"] = btc
+    eth = ETH_PATTERN.findall(text)
+    if eth:
+        wallets["eth"] = eth
+    trx = TRX_PATTERN.findall(text)
+    if trx:
+        wallets["trx"] = trx
+    return wallets
+
+
+def extract_phone_numbers(text: str) -> list[str]:
+    return list(set(PHONE_PATTERN.findall(text)))
+
+
+def extract_emails_regex(text: str) -> list[str]:
+    return list(set(EMAIL_PATTERN.findall(text)))
+
+
+def extract_security_indicators(text: str) -> dict[str, list[str]]:
+    indicators: dict[str, list[str]] = {}
+    ips = extract_ip_addresses(text)
+    if ips:
+        indicators["ip"] = ips
+    wallets = extract_crypto_wallets(text)
+    if wallets:
+        all_wallets: list[str] = []
+        for vals in wallets.values():
+            all_wallets.extend(vals)
+        indicators["wallet"] = all_wallets
+    phones = extract_phone_numbers(text)
+    if phones:
+        indicators["phone"] = phones
+    emails = extract_emails_regex(text)
+    if emails:
+        indicators["email"] = emails
+    return indicators
 
 
 def extract_forward_info(

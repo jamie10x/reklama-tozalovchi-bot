@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import logging
-
 from aiogram import Router, types
 from aiogram.enums import ChatType
 
 from app.bot.filters import IsGroupMessage
+from app.core.logging import get_logger
 from app.database.repositories.chats import ChatRepository
 from app.services.moderation import ModerationService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = Router()
 
@@ -33,7 +32,7 @@ async def handle_edited_message(message: types.Message, session=None) -> None:
         bot=message.bot,
     )
 
-    await mod_service.process_message(
+    deleted = await mod_service.process_message(
         chat_id=message.chat.id,
         message_id=message.message_id,
         text=text,
@@ -43,3 +42,10 @@ async def handle_edited_message(message: types.Message, session=None) -> None:
         entities=message.entities or message.caption_entities or [],
         caption_entities=message.caption_entities or [],
     )
+
+    if deleted:
+        logger.info(
+            "Ad deleted (edited)",
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+        )

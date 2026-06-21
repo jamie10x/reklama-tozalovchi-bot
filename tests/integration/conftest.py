@@ -1,13 +1,11 @@
-import asyncio
 import uuid
 from datetime import datetime, timezone
 
-import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database.base import Base
-from app.database.models import Chat, AllowedEntity, DeletionLog
+from app.database.models import Chat
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test_adcleaner.db"
 
@@ -25,9 +23,7 @@ async def engine():
 
 @pytest_asyncio.fixture
 async def session(engine):
-    session_maker = async_sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
+    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with session_maker() as s:
         yield s
         await s.rollback()

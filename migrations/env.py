@@ -7,12 +7,37 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.database.base import Base
 from app.database.models import Chat, AllowedEntity, DeletionLog  # noqa: F401
+from app.database.secadmin_base import SecAdminBase
+from app.database.secadmin_models import (  # noqa: F401
+    AiAnalysisJob,
+    AiFeedback,
+    AiMessageAnalysis,
+    AiModelRegistry,
+    Case,
+    CaseEvent,
+    CaseNote,
+    EnforcementAction,
+    EventIndicator,
+    Indicator,
+    MemberRiskSignal,
+    MessageEmbedding,
+    ObservedUser,
+    Officer,
+    OfficerAuditLog,
+    OfficerSession,
+    SecurityEvent,
+    SecurityObservationOutbox,
+    SystemHealthEvent,
+    TelegramQueryRequest,
+    UserChatProfile,
+    UserObservedName,
+)
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+target_metadata = [Base.metadata, SecAdminBase.metadata]
 
 
 def run_migrations_offline() -> None:
