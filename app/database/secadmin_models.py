@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -69,7 +70,12 @@ class SecurityEvent(SecAdminBase):
     __tablename__ = "security_events"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    event_number: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
+    event_number: Mapped[int] = mapped_column(
+        BigInteger,
+        unique=True,
+        nullable=False,
+        server_default=text("nextval('secadmin.seq_event_number')"),
+    )
     chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     message_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     sender_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
@@ -369,7 +375,12 @@ class Case(SecAdminBase):
     __tablename__ = "cases"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    case_number: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
+    case_number: Mapped[int] = mapped_column(
+        BigInteger,
+        unique=True,
+        nullable=False,
+        server_default=text("nextval('secadmin.seq_case_number')"),
+    )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     severity: Mapped[str] = mapped_column(String(20), default="medium", nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="open", nullable=False)

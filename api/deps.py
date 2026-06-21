@@ -9,13 +9,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.database.secadmin_models import Officer, OfficerSession
-from app.database.session import get_secadmin_sessionmaker
+from app.database.session import get_secadmin_sessionmaker, get_sessionmaker
 
 logger = get_logger(__name__)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     sm = get_secadmin_sessionmaker()
+    async with sm() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
+async def get_public_db() -> AsyncGenerator[AsyncSession, None]:
+    sm = get_sessionmaker()
     async with sm() as session:
         try:
             yield session

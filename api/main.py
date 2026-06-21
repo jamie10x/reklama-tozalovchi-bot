@@ -24,7 +24,7 @@ from api.routers.reports import router as reports_router
 from api.routers.users import router as users_router
 from app.config import load_config
 from app.core.logging import generate_request_id, get_logger, setup_logging
-from app.database.session import init_secadmin_db
+from app.database.session import init_db, init_secadmin_db
 
 logger = get_logger(__name__)
 
@@ -33,6 +33,7 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     config = load_config()
     setup_logging(config.log_level, config.log_format)
+    await init_db(config)
     await init_secadmin_db(config)
     logger.info("SecAdmin database initialized")
     yield

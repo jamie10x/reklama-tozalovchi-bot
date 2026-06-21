@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_officer, get_db
+from api.deps import get_current_officer, get_public_db
 from api.schemas.groups import GroupListResponse, GroupResponse, GroupUpdateRequest
 from app.database.models import Chat
 from app.database.secadmin_models import Officer
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/v1/groups", tags=["groups"])
 async def list_groups(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_public_db),
     officer: Officer = Depends(get_current_officer),
 ):
     stmt = (
@@ -37,7 +37,7 @@ async def list_groups(
 @router.get("/{chat_id}")
 async def get_group(
     chat_id: int,
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_public_db),
     officer: Officer = Depends(get_current_officer),
 ):
     stmt = select(Chat).where(Chat.telegram_chat_id == chat_id)
@@ -52,7 +52,7 @@ async def get_group(
 async def update_group(
     chat_id: int,
     body: GroupUpdateRequest,
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_public_db),
     officer: Officer = Depends(get_current_officer),
 ):
     stmt = select(Chat).where(Chat.telegram_chat_id == chat_id)
