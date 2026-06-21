@@ -30,7 +30,6 @@ def utcnow() -> datetime:
 
 class SecurityObservationOutbox(SecAdminBase):
     __tablename__ = "security_observation_outbox"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     update_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
@@ -68,7 +67,6 @@ class SecurityObservationOutbox(SecAdminBase):
 
 class SecurityEvent(SecAdminBase):
     __tablename__ = "security_events"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_number: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
@@ -140,7 +138,6 @@ class EventIndicator(SecAdminBase):
 
 class Indicator(SecAdminBase):
     __tablename__ = "indicators"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     indicator_type: Mapped[str] = mapped_column(String(30), nullable=False)
@@ -210,7 +207,6 @@ class ObservedUser(SecAdminBase):
 
 class UserChatProfile(SecAdminBase):
     __tablename__ = "user_chat_profiles"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[int] = mapped_column(
@@ -251,7 +247,6 @@ class UserChatProfile(SecAdminBase):
 
 class UserObservedName(SecAdminBase):
     __tablename__ = "user_observed_names"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[int] = mapped_column(
@@ -277,7 +272,6 @@ class UserObservedName(SecAdminBase):
 
 class MemberRiskSignal(SecAdminBase):
     __tablename__ = "member_risk_signals"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[int] = mapped_column(
@@ -305,7 +299,6 @@ class MemberRiskSignal(SecAdminBase):
 
 class Officer(SecAdminBase):
     __tablename__ = "officers"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
@@ -351,7 +344,6 @@ class OfficerSession(SecAdminBase):
 
 class OfficerAuditLog(SecAdminBase):
     __tablename__ = "officer_audit_logs"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     officer_id: Mapped[uuid.UUID] = mapped_column(
@@ -375,7 +367,6 @@ class OfficerAuditLog(SecAdminBase):
 
 class Case(SecAdminBase):
     __tablename__ = "cases"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     case_number: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
@@ -407,7 +398,6 @@ class Case(SecAdminBase):
 
 class CaseEvent(SecAdminBase):
     __tablename__ = "case_events"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     case_id: Mapped[uuid.UUID] = mapped_column(
@@ -451,7 +441,6 @@ class CaseNote(SecAdminBase):
 
 class EnforcementAction(SecAdminBase):
     __tablename__ = "enforcement_actions"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     action_type: Mapped[str] = mapped_column(String(30), nullable=False)
@@ -488,7 +477,6 @@ class EnforcementAction(SecAdminBase):
 
 class TelegramQueryRequest(SecAdminBase):
     __tablename__ = "telegram_query_requests"
-    __table_args__ = {"schema": SECADMIN_SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     query_type: Mapped[str] = mapped_column(String(30), nullable=False)
