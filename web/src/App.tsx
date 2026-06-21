@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { useAuth } from "./stores/auth";
 import { AuditLogPage } from "./pages/AuditLog";
@@ -52,6 +52,7 @@ export function App() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="health" element={<HealthPage />} />
       </Route>
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
