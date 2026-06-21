@@ -111,6 +111,17 @@ function CommandResultWindow({ item }: { item?: EnforcementAction }) {
         </div>
       </div>
 
+      {(item.status === "pending" || item.status === "claimed") && (
+        <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+          Command is queued. This result window refreshes automatically until the bot marks it completed or failed.
+        </div>
+      )}
+      {item.status === "failed" && item.result && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          Command failed. The raw JSON panel below contains the Telegram/API error details.
+        </div>
+      )}
+
       <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
         <div className="space-y-4">
           <div className="rounded-lg border border-surface-200 p-4">
@@ -156,7 +167,7 @@ function CommandResultWindow({ item }: { item?: EnforcementAction }) {
 export function CommandsPage() {
   const { t } = useI18n();
   const { data: groups } = useGroups();
-  const { data: enforcement } = useEnforcement({ limit: 20 });
+  const { data: enforcement, refetch: refetchEnforcement } = useEnforcement({ limit: 20 });
   const createAction = useCreateEnforcementAction();
   const [actionType, setActionType] = useState<EnforcementActionType>("refresh_group_permissions");
   const [chatId, setChatId] = useState("");
@@ -165,11 +176,20 @@ export function CommandsPage() {
   const [result, setResult] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedAction = actions.find((action) => action.value === actionType) ?? actions[0];
-  const selectedCommand = enforcement?.items.find((item) => item.id === selectedId) ?? enforcement?.items[0];
+  const selectedCommand = enforcement?.items.find((item) => item.id === selectedId) ?? (selectedId ? undefined : enforcement?.items[0]);
+  const hasActiveCommand = enforcement?.items.some((item) => item.status === "pending" || item.status === "claimed") ?? false;
 
   useEffect(() => {
     if (!selectedId && enforcement?.items[0]) setSelectedId(enforcement.items[0].id);
   }, [enforcement?.items, selectedId]);
+
+  useEffect(() => {
+    if (!hasActiveCommand) return;
+    const timer = window.setInterval(() => {
+      refetchEnforcement();
+    }, 2_000);
+    return () => window.clearInterval(timer);
+  }, [hasActiveCommand, refetchEnforcement]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -181,7 +201,11 @@ export function CommandsPage() {
         target_user_id: parseOptionalInt(userId),
       },
       {
-        onSuccess: (action) => setResult(`${action.action_type}: ${action.status}`),
+        onSuccess: (action) => {
+          setSelectedId(action.id);
+          setResult(`${action.action_type}: ${action.status}`);
+          refetchEnforcement();
+        },
       },
     );
   };

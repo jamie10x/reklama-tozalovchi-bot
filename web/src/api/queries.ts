@@ -473,11 +473,13 @@ export function useEnforcement(params: {
   limit?: number;
   status?: string;
   action_type?: EnforcementActionType;
+  chat_id?: number;
 } = {}) {
   const search = new URLSearchParams();
   if (params.limit) search.set("limit", String(params.limit));
   if (params.status) search.set("status", params.status);
   if (params.action_type) search.set("action_type", params.action_type);
+  if (params.chat_id) search.set("chat_id", String(params.chat_id));
   const qs = search.toString();
 
   return useQuery<{ items: EnforcementAction[]; total: number }>({

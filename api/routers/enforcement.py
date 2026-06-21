@@ -21,6 +21,7 @@ async def list_enforcement(
     offset: int = Query(0, ge=0),
     status: str | None = None,
     action_type: str | None = None,
+    chat_id: int | None = None,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
@@ -30,6 +31,7 @@ async def list_enforcement(
         offset=offset,
         status=status,
         action_type=action_type,
+        chat_id=chat_id,
     )
     return {
         "items": [EnforcementActionResponse.model_validate(a) for a in actions],

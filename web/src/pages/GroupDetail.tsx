@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   CaptureSettings,
@@ -6,6 +6,7 @@ import {
   useActivityMessages,
   useCaptureSettings,
   useCreateEnforcementAction,
+  useEnforcement,
   useGroup,
   useUpdateCaptureSettings,
 } from "../api/queries";
@@ -26,11 +27,14 @@ export function GroupDetailPage() {
   const { data: settings } = useCaptureSettings(chatId);
   const updateSettings = useUpdateCaptureSettings(chatId);
   const command = useCreateEnforcementAction();
+  const { data: enforcement, refetch: refetchEnforcement } = useEnforcement({ limit: 5, chat_id: chatId });
   const { data: messages, isLoading: messagesLoading } = useActivityMessages({
     chat_id: chatId,
     limit: 80,
   });
   const [lastCommand, setLastCommand] = useState<string | null>(null);
+  const latestCommand = enforcement?.items.find((item) => item.id === lastCommand) ?? (lastCommand ? undefined : enforcement?.items[0]);
+  const hasActiveCommand = enforcement?.items.some((item) => item.status === "pending" || item.status === "claimed") ?? false;
 
   const flagged = useMemo(
     () => messages?.items.filter((item) => item.detection_status !== "clean") ?? [],
@@ -57,11 +61,22 @@ export function GroupDetailPage() {
     updateSettings.mutate({ capture_mode });
   };
 
+  useEffect(() => {
+    if (!hasActiveCommand) return;
+    const timer = window.setInterval(() => {
+      refetchEnforcement();
+    }, 2_000);
+    return () => window.clearInterval(timer);
+  }, [hasActiveCommand, refetchEnforcement]);
+
   const runCommand = (action_type: EnforcementActionType) => {
     command.mutate(
       { action_type, target_chat_id: chatId },
       {
-        onSuccess: (action) => setLastCommand(`${action.action_type}: ${action.status}`),
+        onSuccess: (action) => {
+          setLastCommand(action.id);
+          refetchEnforcement();
+        },
       },
     );
   };
@@ -148,7 +163,30 @@ export function GroupDetailPage() {
                 </button>
               ))}
             </div>
-            {lastCommand && <p className="mt-3 text-sm text-green-700">{lastCommand}</p>}
+            {latestCommand && (
+              <div className="mt-4 rounded-lg border border-surface-200 bg-surface-50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-surface-900">{latestCommand.action_type}</p>
+                    <p className="font-mono text-xs text-surface-500">{latestCommand.id}</p>
+                  </div>
+                  <Badge value={latestCommand.status} />
+                </div>
+                {(latestCommand.status === "pending" || latestCommand.status === "claimed") && (
+                  <p className="mt-2 text-xs text-surface-500">
+                    Waiting for the bot worker. This card refreshes automatically.
+                  </p>
+                )}
+                {latestCommand.result && (
+                  <pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-surface-950 p-3 text-xs text-white">
+                    {JSON.stringify(latestCommand.result, null, 2)}
+                  </pre>
+                )}
+                <Link to="/commands" className="btn-secondary mt-3 w-full px-2 py-1.5">
+                  Open full result window
+                </Link>
+              </div>
+            )}
             {command.error && <p className="mt-3 text-sm text-red-700">Command could not be queued.</p>}
           </div>
         </div>

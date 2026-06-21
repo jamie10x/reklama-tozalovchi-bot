@@ -77,12 +77,15 @@ class EnforcementRepository:
         offset: int = 0,
         status: str | None = None,
         action_type: str | None = None,
+        chat_id: int | None = None,
     ) -> list[EnforcementAction]:
         conditions = []
         if status is not None:
             conditions.append(EnforcementAction.status == status)
         if action_type is not None:
             conditions.append(EnforcementAction.action_type == action_type)
+        if chat_id is not None:
+            conditions.append(EnforcementAction.target_chat_id == chat_id)
         stmt = (
             select(EnforcementAction)
             .where(and_(*conditions) if conditions else True)
