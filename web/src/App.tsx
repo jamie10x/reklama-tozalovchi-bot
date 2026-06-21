@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { useAuth } from "./stores/auth";
 import { AuditLogPage } from "./pages/AuditLog";
+import { ActivityPage } from "./pages/Activity";
 import { CasesPage } from "./pages/Cases";
 import { CommandsPage } from "./pages/Commands";
 import { DashboardPage } from "./pages/Dashboard";
@@ -11,7 +12,9 @@ import { EventsPage } from "./pages/Events";
 import { GroupsPage } from "./pages/Groups";
 import { HealthPage } from "./pages/Health";
 import { IndicatorsPage } from "./pages/Indicators";
+import { LiveMonitorPage } from "./pages/LiveMonitor";
 import { LoginPage } from "./pages/Login";
+import { MemberOSINTPage } from "./pages/MemberOSINT";
 import { OfficersPage } from "./pages/Officers";
 import { ReportsPage } from "./pages/Reports";
 import { UsersPage } from "./pages/Users";
@@ -42,10 +45,13 @@ export function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="monitor" element={<LiveMonitorPage />} />
+        <Route path="activity" element={<ActivityPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="events/:id" element={<EventDetailPage />} />
         <Route path="indicators" element={<IndicatorsPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="members-osint" element={<MemberOSINTPage />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="commands" element={<CommandsPage />} />
         <Route path="cases" element={<CasesPage />} />

@@ -13,6 +13,20 @@ logger = get_logger(__name__)
 router = Router()
 
 
+def _message_type(message: types.Message) -> str:
+    if message.text:
+        return "text"
+    if message.caption:
+        return "caption"
+    if message.photo:
+        return "photo"
+    if message.video:
+        return "video"
+    if message.document:
+        return "document"
+    return "other"
+
+
 @router.edited_message(IsGroupMessage())
 async def handle_edited_message(
     message: types.Message,
@@ -48,6 +62,15 @@ async def handle_edited_message(
         sender_chat_id=message.sender_chat.id if message.sender_chat else None,
         entities=message.entities or message.caption_entities or [],
         caption_entities=message.caption_entities or [],
+        sender_username=message.from_user.username if message.from_user else None,
+        sender_first_name=message.from_user.first_name if message.from_user else None,
+        sender_last_name=message.from_user.last_name if message.from_user else None,
+        message_type=_message_type(message),
+        message_date=message.date,
+        is_edited=True,
+        reply_to_message_id=message.reply_to_message.message_id
+        if message.reply_to_message
+        else None,
     )
 
     if deleted:

@@ -138,6 +138,106 @@ export function useGroups() {
   });
 }
 
+export interface CaptureSettings {
+  chat_id: number;
+  enabled: boolean;
+  capture_mode: "metadata_only" | "flagged_only" | "full_text";
+  metadata_retention_days: number;
+  flagged_retention_days: number;
+  updated_by_officer_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ObservedMessage {
+  id: string;
+  chat_id: number;
+  message_id: number;
+  sender_id: number | null;
+  sender_username: string | null;
+  sender_first_name: string | null;
+  sender_last_name: string | null;
+  sender_is_bot: boolean;
+  sender_chat_id: number | null;
+  message_type: string;
+  text: string | null;
+  text_stored: boolean;
+  has_text: boolean;
+  is_edited: boolean;
+  is_forwarded: boolean;
+  forward_from_chat_id: number | null;
+  reply_to_message_id: number | null;
+  detection_status: string;
+  risk_score: number;
+  ad_score: number | null;
+  security_score: number | null;
+  ai_score: number | null;
+  detection_result: Record<string, unknown> | null;
+  event_id: string | null;
+  message_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ObservedMessageListResponse {
+  items: ObservedMessage[];
+  total: number;
+}
+
+export function useActivityMessages(params: {
+  limit?: number;
+  chat_id?: number;
+  sender_id?: number;
+  flagged_only?: boolean;
+} = {}) {
+  const search = new URLSearchParams();
+  if (params.limit) search.set("limit", String(params.limit));
+  if (params.chat_id) search.set("chat_id", String(params.chat_id));
+  if (params.sender_id) search.set("sender_id", String(params.sender_id));
+  if (params.flagged_only) search.set("flagged_only", "true");
+  const qs = search.toString();
+
+  return useQuery<ObservedMessageListResponse>({
+    queryKey: ["activity", params],
+    queryFn: () => apiFetch(`/api/v1/activity/messages${qs ? `?${qs}` : ""}`),
+    refetchInterval: params.flagged_only ? 5_000 : false,
+  });
+}
+
+export function useLiveActivity(chatId?: number) {
+  const search = new URLSearchParams();
+  search.set("limit", "50");
+  if (chatId) search.set("chat_id", String(chatId));
+  return useQuery<ObservedMessageListResponse>({
+    queryKey: ["activity-live", chatId],
+    queryFn: () => apiFetch(`/api/v1/activity/live?${search.toString()}`),
+    refetchInterval: 5_000,
+  });
+}
+
+export function useCaptureSettings(chatId?: number) {
+  return useQuery<CaptureSettings>({
+    queryKey: ["capture-settings", chatId],
+    queryFn: () => apiFetch(`/api/v1/activity/groups/${chatId}/settings`),
+    enabled: !!chatId,
+  });
+}
+
+export function useUpdateCaptureSettings(chatId?: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Partial<Pick<CaptureSettings, "enabled" | "capture_mode">>) =>
+      apiFetch<CaptureSettings>(`/api/v1/activity/groups/${chatId}/settings`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["capture-settings", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+  });
+}
+
 interface Officer {
   id: string;
   telegram_id: number;
@@ -216,6 +316,14 @@ export function useUsers(query: string) {
   });
 }
 
+export function useUserIntel(telegramId?: number) {
+  return useQuery({
+    queryKey: ["user-intel", telegramId],
+    queryFn: () => apiFetch(`/api/v1/users/${telegramId}/intel`),
+    enabled: !!telegramId,
+  });
+}
+
 interface CaseItem {
   id: string;
   case_number: number;
@@ -269,7 +377,12 @@ export type EnforcementActionType =
   | "refresh_group_permissions"
   | "restrict_member"
   | "mute_member"
-  | "ban_member";
+  | "ban_member"
+  | "get_chat_info"
+  | "get_chat_administrators"
+  | "get_chat_member_count"
+  | "get_user_profile_photos"
+  | "save_observed_state";
 
 export interface EnforcementAction {
   id: string;

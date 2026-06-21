@@ -4,9 +4,12 @@ import { useAuth } from "../../stores/auth";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: "◉", roles: ["super_admin", "analyst", "responder", "auditor"] },
+  { to: "/monitor", label: "Live Monitor", icon: "●", roles: ["super_admin", "analyst", "responder"] },
+  { to: "/activity", label: "Activity", icon: "▣", roles: ["super_admin", "analyst", "responder"] },
   { to: "/events", label: "Voqealar", icon: "⚡", roles: ["super_admin", "analyst", "responder"] },
   { to: "/indicators", label: "Indikatorlar", icon: "◆", roles: ["super_admin", "analyst"] },
   { to: "/users", label: "Foydalanuvchilar", icon: "👤", roles: ["super_admin", "analyst"] },
+  { to: "/members-osint", label: "Members OSINT", icon: "◎", roles: ["super_admin", "analyst"] },
   { to: "/groups", label: "Guruhlar", icon: "💬", roles: ["super_admin", "analyst", "responder"] },
   { to: "/commands", label: "Buyruqlar", icon: "▶", roles: ["super_admin", "responder"] },
   { to: "/cases", label: "Ishlar", icon: "📋", roles: ["super_admin", "analyst", "responder"] },

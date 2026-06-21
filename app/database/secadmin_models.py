@@ -66,6 +66,31 @@ class SecurityObservationOutbox(SecAdminBase):
     )
 
 
+class GroupCaptureSetting(SecAdminBase):
+    __tablename__ = "group_capture_settings"
+
+    chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    capture_mode: Mapped[str] = mapped_column(String(20), default="flagged_only", nullable=False)
+    metadata_retention_days: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+    flagged_retention_days: Mapped[int] = mapped_column(Integer, default=90, nullable=False)
+    updated_by_officer_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "capture_mode IN ('metadata_only', 'flagged_only', 'full_text')",
+            name="ck_capture_mode",
+        ),
+        {"schema": SECADMIN_SCHEMA},
+    )
+
+
 class SecurityEvent(SecAdminBase):
     __tablename__ = "security_events"
 
@@ -119,6 +144,59 @@ class SecurityEvent(SecAdminBase):
 
     indicators: Mapped[list["EventIndicator"]] = relationship(
         back_populates="event", cascade="all, delete-orphan"
+    )
+
+
+class ObservedMessage(SecAdminBase):
+    __tablename__ = "observed_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    message_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    sender_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    sender_username: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    sender_first_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    sender_last_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    sender_is_bot: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    sender_chat_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    message_type: Mapped[str] = mapped_column(String(30), default="text", nullable=False)
+    text_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    text_stored: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    has_text: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_forwarded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    forward_from_chat_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    reply_to_message_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    entities: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    detection_status: Mapped[str] = mapped_column(String(20), default="clean", nullable=False)
+    risk_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    ad_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    security_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    ai_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    detection_result: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    event_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("secadmin.security_events.id", ondelete="SET NULL"), nullable=True
+    )
+    message_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "detection_status IN ('clean', 'advertisement', 'security_threat', 'ai_review')",
+            name="ck_observed_message_detection_status",
+        ),
+        UniqueConstraint("chat_id", "message_id", name="uq_observed_message_chat_message"),
+        Index("ix_observed_messages_chat_created", "chat_id", "created_at"),
+        Index("ix_observed_messages_sender", "sender_id"),
+        Index("ix_observed_messages_status_created", "detection_status", "created_at"),
+        Index("ix_observed_messages_event", "event_id"),
+        {"schema": SECADMIN_SCHEMA},
     )
 
 
@@ -475,7 +553,9 @@ class EnforcementAction(SecAdminBase):
         CheckConstraint(
             "action_type IN ('delete_message', 'trust_sender', 'block_indicator', "
             "'allow_indicator', 'refresh_member', 'refresh_group_permissions', "
-            "'restrict_member', 'mute_member', 'ban_member')",
+            "'restrict_member', 'mute_member', 'ban_member', 'get_chat_info', "
+            "'get_chat_administrators', 'get_chat_member_count', "
+            "'get_user_profile_photos', 'save_observed_state')",
             name="ck_enforcement_action_type",
         ),
         CheckConstraint(

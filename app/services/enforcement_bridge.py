@@ -20,6 +20,12 @@ CLAIM_BATCH_SIZE = 5
 WORKER_ID_PREFIX = "enforcement"
 
 
+def _json_model(obj):
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump(mode="json", exclude_none=True)
+    return str(obj)
+
+
 class EnforcementBridge:
     def __init__(self, bot: Bot) -> None:
         self._bot = bot
@@ -128,6 +134,45 @@ class EnforcementBridge:
                 }
             except Exception as e:
                 return {"error": str(e)}
+
+        elif action_type == "get_chat_info":
+            if chat_id is None:
+                return {"error": "get_chat_info requires target_chat_id"}
+            try:
+                chat = await self._bot.get_chat(chat_id=chat_id)
+                return {"chat": _json_model(chat)}
+            except Exception as e:
+                return {"error": str(e)}
+
+        elif action_type == "get_chat_administrators":
+            if chat_id is None:
+                return {"error": "get_chat_administrators requires target_chat_id"}
+            try:
+                admins = await self._bot.get_chat_administrators(chat_id=chat_id)
+                return {"administrators": [_json_model(admin) for admin in admins]}
+            except Exception as e:
+                return {"error": str(e)}
+
+        elif action_type == "get_chat_member_count":
+            if chat_id is None:
+                return {"error": "get_chat_member_count requires target_chat_id"}
+            try:
+                count = await self._bot.get_chat_member_count(chat_id=chat_id)
+                return {"member_count": count}
+            except Exception as e:
+                return {"error": str(e)}
+
+        elif action_type == "get_user_profile_photos":
+            if user_id is None:
+                return {"error": "get_user_profile_photos requires target_user_id"}
+            try:
+                photos = await self._bot.get_user_profile_photos(user_id=user_id, limit=5)
+                return {"profile_photos": _json_model(photos)}
+            except Exception as e:
+                return {"error": str(e)}
+
+        elif action_type == "save_observed_state":
+            return {"saved": True, "info": "Observed state is continuously persisted"}
 
         elif action_type in ("block_indicator", "allow_indicator"):
             return {"info": f"{action_type} logged but no Telegram API action needed"}

@@ -26,6 +26,26 @@ def _extract_forward_chat_id(message: types.Message) -> tuple[int | None, bool]:
     return None, True
 
 
+def _message_type(message: types.Message) -> str:
+    if message.text:
+        return "text"
+    if message.caption:
+        return "caption"
+    if message.photo:
+        return "photo"
+    if message.video:
+        return "video"
+    if message.document:
+        return "document"
+    if message.audio:
+        return "audio"
+    if message.voice:
+        return "voice"
+    if message.sticker:
+        return "sticker"
+    return "other"
+
+
 async def _observe_sender(message: types.Message, repo: ObservedUserRepository) -> None:
     if message.from_user is None or message.from_user.is_bot:
         return
@@ -92,6 +112,14 @@ async def handle_group_message(
         forward_from_chat_id=forward_from_chat_id,
         entities=message.entities or message.caption_entities or [],
         caption_entities=message.caption_entities or [],
+        sender_username=message.from_user.username if message.from_user else None,
+        sender_first_name=message.from_user.first_name if message.from_user else None,
+        sender_last_name=message.from_user.last_name if message.from_user else None,
+        message_type=_message_type(message),
+        message_date=message.date,
+        reply_to_message_id=message.reply_to_message.message_id
+        if message.reply_to_message
+        else None,
     )
 
     if deleted:

@@ -14,6 +14,11 @@ const actions: { value: EnforcementActionType; label: string }[] = [
   { value: "restrict_member", label: "A'zoni cheklash" },
   { value: "mute_member", label: "A'zoni 1 soat mute qilish" },
   { value: "ban_member", label: "A'zoni ban qilish" },
+  { value: "get_chat_info", label: "Guruh ma'lumotlarini olish" },
+  { value: "get_chat_administrators", label: "Adminlar ro'yxatini olish" },
+  { value: "get_chat_member_count", label: "A'zolar sonini olish" },
+  { value: "get_user_profile_photos", label: "Profil rasmlari metadata" },
+  { value: "save_observed_state", label: "Kuzatilgan holatni saqlash" },
 ];
 
 function parseOptionalInt(value: string): number | undefined {

@@ -11,6 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.auth.router import router as auth_router
 from api.config import load_api_config
+from api.routers.activity import router as activity_router
 from api.routers.audit import router as audit_router
 from api.routers.cases import router as cases_router
 from api.routers.dashboard import router as dashboard_router
@@ -101,6 +102,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(health_router)
+    app.include_router(activity_router)
     app.include_router(dashboard_router)
     app.include_router(events_router)
     app.include_router(indicators_router)

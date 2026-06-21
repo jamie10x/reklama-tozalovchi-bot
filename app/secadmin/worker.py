@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database.repositories.activity import ActivityRepository
 from app.database.repositories.events import SecurityEventRepository
 from app.database.repositories.indicators import IndicatorRepository
 from app.database.repositories.outbox import OutboxRepository
@@ -42,6 +43,7 @@ class SecAdminWorker:
         event_repo = SecurityEventRepository(session)
         indicator_repo = IndicatorRepository(session)
         user_repo = ObservedUserRepository(session)
+        activity_repo = ActivityRepository(session)
 
         entries = await outbox_repo.claim_next(
             worker_id=self._worker_id,
@@ -59,6 +61,7 @@ class SecAdminWorker:
                     indicator_repo=indicator_repo,
                     user_repo=user_repo,
                     outbox_repo=outbox_repo,
+                    activity_repo=activity_repo,
                 )
                 await session.flush()
             except Exception:
@@ -81,6 +84,7 @@ class SecAdminWorker:
         indicator_repo: IndicatorRepository,
         user_repo: ObservedUserRepository,
         outbox_repo: OutboxRepository,
+        activity_repo: ActivityRepository,
     ) -> None:
         detection_result = entry.detection_result or {}
         ad_result = detection_result.get("ad")
@@ -145,6 +149,13 @@ class SecAdminWorker:
             for indicator_id_str in indicator_ids:
                 await self._link_indicator(indicator_repo, event.id, indicator_id_str)
 
+            await activity_repo.link_event(
+                entry.chat_id,
+                entry.message_id,
+                event.id,
+                "security_threat",
+            )
+
         elif ad_result and ad_result.get("is_advertisement"):
             now = datetime.now(timezone.utc)
             score = ad_result.get("score", 0)
@@ -165,6 +176,13 @@ class SecAdminWorker:
 
             for indicator_id_str in indicator_ids:
                 await self._link_indicator(indicator_repo, event.id, indicator_id_str)
+
+            await activity_repo.link_event(
+                entry.chat_id,
+                entry.message_id,
+                event.id,
+                "advertisement",
+            )
 
         if entry.sender_id is not None and security_result and security_result.get("is_threat"):
             try:
