@@ -4,7 +4,9 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -100,7 +102,7 @@ async def login(body: LoginRequest, request: Request, session: AsyncSession = De
 
 @router.post("/logout")
 async def logout(
-    authorization: str | None = None,
+    authorization: Annotated[str | None, Header()] = None,
     officer: Officer = Depends(get_current_officer),
     session: AsyncSession = Depends(get_db),
 ):

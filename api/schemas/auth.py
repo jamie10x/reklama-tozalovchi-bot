@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel
 
 
@@ -13,7 +15,7 @@ class LoginResponse(BaseModel):
 
 
 class MeResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     telegram_id: int
     role: str
     display_name: str | None

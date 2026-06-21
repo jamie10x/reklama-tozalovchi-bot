@@ -1,10 +1,11 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class EventResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     event_number: int
     chat_id: int
     message_id: int | None

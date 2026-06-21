@@ -1,10 +1,11 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class EnforcementActionResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     action_type: str
     target_chat_id: int | None
     target_message_id: int | None
@@ -22,4 +23,4 @@ class EnforcementActionCreateRequest(BaseModel):
     target_chat_id: int | None = None
     target_message_id: int | None = None
     target_user_id: int | None = None
-    target_indicator_id: str | None = None
+    target_indicator_id: uuid.UUID | None = None

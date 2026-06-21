@@ -41,12 +41,12 @@ async def list_events(
 
 @router.get("/{event_id}")
 async def get_event(
-    event_id: str,
+    event_id: uuid.UUID,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = SecurityEventRepository(session)
-    event = await repo.get_by_id(uuid.UUID(event_id))
+    event = await repo.get_by_id(event_id)
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return EventResponse.model_validate(event)
@@ -54,14 +54,14 @@ async def get_event(
 
 @router.patch("/{event_id}")
 async def update_event(
-    event_id: str,
+    event_id: uuid.UUID,
     body: EventUpdateRequest,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = SecurityEventRepository(session)
     event = await repo.update_status(
-        uuid.UUID(event_id),
+        event_id,
         status=body.status,
         officer_id=body.assigned_officer_id,
     )
@@ -75,7 +75,7 @@ async def update_event(
         officer_id=officer.id,
         action_type="event_status_update",
         resource_type="event",
-        resource_id=event_id,
+        resource_id=str(event_id),
         details={"new_status": body.status},
     )
     return EventResponse.model_validate(event)
