@@ -48,7 +48,12 @@ async def _observe_sender(message: types.Message, repo: ObservedUserRepository) 
 
 
 @router.message(IsGroupMessage())
-async def handle_group_message(message: types.Message, session=None, secadmin_session=None) -> None:
+async def handle_group_message(
+    message: types.Message,
+    session=None,
+    secadmin_session=None,
+    ai_service=None,
+) -> None:
     if message.chat.type not in (ChatType.GROUP, ChatType.SUPERGROUP):
         return
 
@@ -73,6 +78,7 @@ async def handle_group_message(message: types.Message, session=None, secadmin_se
         session=session,
         bot=message.bot,
         secadmin_session=secadmin_session,
+        ai_service=ai_service,
     )
 
     deleted = await mod_service.process_message(

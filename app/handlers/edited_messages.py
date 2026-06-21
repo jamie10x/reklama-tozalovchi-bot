@@ -14,7 +14,12 @@ router = Router()
 
 
 @router.edited_message(IsGroupMessage())
-async def handle_edited_message(message: types.Message, session=None) -> None:
+async def handle_edited_message(
+    message: types.Message,
+    session=None,
+    secadmin_session=None,
+    ai_service=None,
+) -> None:
     if message.chat.type not in (ChatType.GROUP, ChatType.SUPERGROUP):
         return
 
@@ -30,6 +35,8 @@ async def handle_edited_message(message: types.Message, session=None) -> None:
     mod_service = ModerationService(
         session=session,
         bot=message.bot,
+        secadmin_session=secadmin_session,
+        ai_service=ai_service,
     )
 
     deleted = await mod_service.process_message(

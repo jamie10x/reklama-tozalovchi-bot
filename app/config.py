@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     cleanup_interval_minutes: int = 30
     message_excerpt_max_length: int = 250
 
+    ai_enabled: bool = False
+    ai_provider: str = "openai"
+    ai_model: str = ""
+    ai_api_key: str = ""
+    ai_api_url: str = ""
+
     def validate(self) -> None:
         if not self.bot_token:
             raise ValueError("BOT_TOKEN is required")

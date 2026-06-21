@@ -3,6 +3,7 @@ from __future__ import annotations
 from aiogram import Bot
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai import AIService
 from app.core.logging import get_logger
 from app.database.repositories.allowlist import AllowlistRepository
 from app.database.repositories.chats import ChatRepository
@@ -25,6 +26,7 @@ class ModerationService:
         detection_service: DetectionService | None = None,
         security_detector: SecurityDetector | None = None,
         secadmin_session: AsyncSession | None = None,
+        ai_service: AIService | None = None,
     ) -> None:
         self._session = session
         self._bot = bot
@@ -34,6 +36,7 @@ class ModerationService:
         self._detection = detection_service or DetectionService()
         self._security = security_detector or SecurityDetector()
         self._secadmin_session = secadmin_session
+        self._ai = ai_service
 
     def _make_observation_producer(self) -> ObservationProducer | None:
         if self._secadmin_session is not None:
@@ -121,6 +124,15 @@ class ModerationService:
 
         security_result = self._security.analyze(text or "")
 
+        ai_result = None
+        if self._ai is not None and self._ai.enabled:
+            ai_response = await self._ai.analyze_message(
+                text=text or "",
+                rule_result=ad_result,
+            )
+            if ai_response is not None:
+                ai_result = ai_response.to_dict()
+
         await self._produce_observation_if_needed(
             chat_id=chat_id,
             message_id=message_id,
@@ -135,6 +147,7 @@ class ModerationService:
             update_id=update_id,
             ad_result=ad_result,
             security_result=security_result,
+            ai_result=ai_result,
         )
 
         if not ad_result.is_advertisement:
@@ -191,6 +204,7 @@ class ModerationService:
         update_id: int | None = None,
         ad_result: DetectionResult | None = None,
         security_result: SecurityResult | None = None,
+        ai_result: dict | None = None,
     ) -> None:
         producer = self._make_observation_producer()
         if producer is None:
@@ -208,6 +222,7 @@ class ModerationService:
             forward_from_chat_id=forward_from_chat_id,
             ad_result=ad_result,
             security_result=security_result,
+            ai_result=ai_result,
             entities=entities or [],
             caption_entities=caption_entities or [],
         )

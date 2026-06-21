@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
+from app.ai import AIService
 from app.bot.commands import set_bot_commands
 from app.bot.middlewares import DatabaseSessionMiddleware, ErrorLoggingMiddleware, I18nMiddleware
 from app.config import load_config
@@ -50,11 +51,20 @@ async def main() -> None:
     dp.include_router(messages.router)
     dp.include_router(edited_messages.router)
 
-    dp.update.middleware(ErrorLoggingMiddleware())
-    dp.update.middleware(DatabaseSessionMiddleware())
-    dp.update.middleware(I18nMiddleware(config.bot_language))
-
     dp["settings"] = config
+
+    ai_service = AIService.from_config(
+        enabled=config.ai_enabled,
+        provider_name=config.ai_provider,
+        api_key=config.ai_api_key,
+        api_url=config.ai_api_url,
+        model=config.ai_model,
+    )
+    dp["ai_service"] = ai_service
+
+    dp.update.middleware(ErrorLoggingMiddleware())
+    dp.update.middleware(DatabaseSessionMiddleware(ai_service=ai_service))
+    dp.update.middleware(I18nMiddleware(config.bot_language))
 
     cleanup_task = start_cleanup_task(config.cleanup_interval_minutes)
 

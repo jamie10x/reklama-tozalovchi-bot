@@ -26,6 +26,9 @@ async def _maybe_secadmin_session() -> AsyncGenerator[AsyncSession | None, None]
 
 
 class DatabaseSessionMiddleware(BaseMiddleware):
+    def __init__(self, ai_service: Any = None) -> None:
+        self._ai_service = ai_service
+
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
@@ -37,6 +40,8 @@ class DatabaseSessionMiddleware(BaseMiddleware):
             data["session"] = session
             if secadmin_session is not None:
                 data["secadmin_session"] = secadmin_session
+                if self._ai_service is not None:
+                    data["ai_service"] = self._ai_service
             try:
                 return await handler(event, data)
             except Exception:
