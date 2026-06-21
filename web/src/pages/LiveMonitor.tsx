@@ -8,7 +8,7 @@ import {
   useGroups,
   useLiveActivity,
 } from "../api/queries";
-import { Badge, EmptyState, PageHeader, RiskMeter, SkeletonRows, relativeTime } from "../components/soc";
+import { EmptyState, MessageInfoCard, PageHeader, SkeletonRows } from "../components/soc";
 
 const filters = [
   { value: "", label: "All statuses" },
@@ -17,20 +17,6 @@ const filters = [
   { value: "ai_review", label: "AI review" },
   { value: "clean", label: "Clean" },
 ];
-
-function detectionReasons(message: ObservedMessage) {
-  const result = message.detection_result;
-  const security = result?.security as { reasons?: string[]; detected_indicators?: Record<string, string[]> } | undefined;
-  const ad = result?.ad as { reasons?: string[]; detected_domains?: string[]; detected_telegram_entities?: string[] } | undefined;
-  const reasons = [
-    ...(security?.reasons ?? []),
-    ...(ad?.reasons ?? []),
-    ...Object.keys(security?.detected_indicators ?? {}),
-    ...((ad?.detected_domains ?? []).map((item) => `domain:${item}`)),
-    ...((ad?.detected_telegram_entities ?? []).map((item) => `telegram:${item}`)),
-  ];
-  return [...new Set(reasons)].slice(0, 6);
-}
 
 export function LiveMonitorPage() {
   const { data: groups } = useGroups();
@@ -145,36 +131,12 @@ export function LiveMonitorPage() {
           <SkeletonRows rows={6} />
         ) : messages.length ? (
           <div className="space-y-4">
-            {messages.map((message) => {
-              const reasons = detectionReasons(message);
-              return (
-                <div key={message.id} className="rounded-lg border border-surface-200 p-4">
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_180px]">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge value={message.detection_status} />
-                        <span className="font-mono text-xs text-surface-500">chat={message.chat_id}</span>
-                        <span className="font-mono text-xs text-surface-500">msg={message.message_id}</span>
-                        <span className="text-xs text-surface-500">{relativeTime(message.created_at)}</span>
-                      </div>
-                      <p className="mt-2 text-sm font-semibold text-surface-900">
-                        {message.sender_username ? `@${message.sender_username}` : message.sender_id || "Unknown sender"}
-                      </p>
-                      <p className="mt-3 rounded-lg bg-surface-50 p-3 text-sm text-surface-800">
-                        {message.text || (message.has_text ? "Text hidden by capture policy" : "No message text")}
-                      </p>
-                      {reasons.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {reasons.map((reason) => (
-                            <span key={reason} className="rounded-full bg-surface-100 px-2 py-1 text-xs text-surface-600">
-                              {reason}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-3">
-                      <RiskMeter score={message.risk_score} />
+            {messages.map((message) => (
+              <MessageInfoCard
+                key={message.id}
+                message={message}
+                action={
+                  <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           className="btn-danger px-2"
@@ -212,11 +174,10 @@ export function LiveMonitorPage() {
                       >
                         Create case
                       </button>
-                    </div>
                   </div>
-                </div>
-              );
-            })}
+                }
+              />
+            ))}
           </div>
         ) : (
           <EmptyState

@@ -7,7 +7,7 @@ import {
   useGroups,
   useUpdateCaptureSettings,
 } from "../api/queries";
-import { Badge, EmptyState, PageHeader, RiskMeter, SkeletonRows, relativeTime } from "../components/soc";
+import { EmptyState, MessageInfoCard, PageHeader, SkeletonRows } from "../components/soc";
 
 export function ActivityPage() {
   const { data: groups } = useGroups();
@@ -109,43 +109,10 @@ export function ActivityPage() {
             description="The bot cannot import old Telegram history. Activity appears only after the bot receives future group updates, and text retention depends on the selected capture mode."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-surface-200 text-surface-500">
-                  <th className="pb-3 font-medium">Time</th>
-                  <th className="pb-3 font-medium">Chat</th>
-                  <th className="pb-3 font-medium">Message</th>
-                  <th className="pb-3 font-medium">Sender</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Risk</th>
-                  <th className="pb-3 font-medium">Text</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data?.items.map((message) => (
-                  <tr key={message.id} className="border-b border-surface-100 align-top">
-                    <td className="py-3 text-xs text-surface-500">
-                      {relativeTime(message.created_at)}
-                    </td>
-                    <td className="py-3 font-mono text-xs">{message.chat_id}</td>
-                    <td className="py-3 font-mono text-xs">{message.message_id}</td>
-                    <td className="py-3">
-                      {message.sender_username ? `@${message.sender_username}` : message.sender_id || "-"}
-                    </td>
-                    <td className="py-3">
-                      <Badge value={message.detection_status} />
-                    </td>
-                    <td className="w-28 py-3">
-                      <RiskMeter score={message.risk_score} />
-                    </td>
-                    <td className="max-w-xl py-3 text-surface-700">
-                      {message.text || (message.has_text ? "Hidden by policy" : "-")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {data?.items.map((message) => (
+              <MessageInfoCard key={message.id} message={message} compact />
+            ))}
           </div>
         )}
       </div>

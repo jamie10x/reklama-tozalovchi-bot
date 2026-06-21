@@ -1,46 +1,48 @@
 import { clsx } from "clsx";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../stores/auth";
+import { useI18n } from "../../i18n";
 
 const navSections = [
   {
-    label: "Operations",
+    labelKey: "operations",
     items: [
-      { to: "/", label: "Command Center", icon: "CC", roles: ["super_admin", "analyst", "responder", "auditor"] },
-      { to: "/monitor", label: "Live Triage", icon: "LT", roles: ["super_admin", "analyst", "responder"] },
-      { to: "/groups", label: "Group Health", icon: "GH", roles: ["super_admin", "analyst", "responder"] },
-      { to: "/activity", label: "Activity Store", icon: "AS", roles: ["super_admin", "analyst", "responder"] },
+      { to: "/", labelKey: "command_center", icon: "CC", roles: ["super_admin", "analyst", "responder", "auditor"] },
+      { to: "/monitor", labelKey: "live_triage", icon: "LT", roles: ["super_admin", "analyst", "responder"] },
+      { to: "/groups", labelKey: "group_health", icon: "GH", roles: ["super_admin", "analyst", "responder"] },
+      { to: "/activity", labelKey: "activity_store", icon: "AS", roles: ["super_admin", "analyst", "responder"] },
     ],
   },
   {
-    label: "Investigation",
+    labelKey: "investigation",
     items: [
-      { to: "/events", label: "Events", icon: "EV", roles: ["super_admin", "analyst", "responder"] },
-      { to: "/cases", label: "Cases", icon: "CA", roles: ["super_admin", "analyst", "responder"] },
-      { to: "/members-osint", label: "Member Intel", icon: "MI", roles: ["super_admin", "analyst"] },
-      { to: "/indicators", label: "Indicators", icon: "IN", roles: ["super_admin", "analyst"] },
-      { to: "/users", label: "Users", icon: "US", roles: ["super_admin", "analyst"] },
+      { to: "/events", labelKey: "events", icon: "EV", roles: ["super_admin", "analyst", "responder"] },
+      { to: "/cases", labelKey: "cases", icon: "CA", roles: ["super_admin", "analyst", "responder"] },
+      { to: "/members-osint", labelKey: "member_intel", icon: "MI", roles: ["super_admin", "analyst"] },
+      { to: "/indicators", labelKey: "indicators", icon: "IN", roles: ["super_admin", "analyst"] },
+      { to: "/users", labelKey: "users", icon: "US", roles: ["super_admin", "analyst"] },
     ],
   },
   {
-    label: "Response",
+    labelKey: "response",
     items: [
-      { to: "/commands", label: "Bot Commands", icon: "BC", roles: ["super_admin", "responder"] },
-      { to: "/reports", label: "Reports", icon: "RP", roles: ["super_admin", "analyst"] },
+      { to: "/commands", labelKey: "bot_commands", icon: "BC", roles: ["super_admin", "responder"] },
+      { to: "/reports", labelKey: "reports", icon: "RP", roles: ["super_admin", "analyst"] },
     ],
   },
   {
-    label: "Administration",
+    labelKey: "administration",
     items: [
-      { to: "/health", label: "System Health", icon: "SH", roles: ["super_admin", "analyst", "responder", "auditor"] },
-      { to: "/audit", label: "Audit Log", icon: "AL", roles: ["super_admin", "auditor"] },
-      { to: "/officers", label: "Officers", icon: "OF", roles: ["super_admin"] },
+      { to: "/health", labelKey: "system_health", icon: "SH", roles: ["super_admin", "analyst", "responder", "auditor"] },
+      { to: "/audit", labelKey: "audit_log", icon: "AL", roles: ["super_admin", "auditor"] },
+      { to: "/officers", labelKey: "officers", icon: "OF", roles: ["super_admin"] },
     ],
   },
 ];
 
 export function Sidebar() {
   const { officer } = useAuth();
+  const { t } = useI18n();
   const role = officer?.role ?? "analyst";
 
   return (
@@ -51,7 +53,7 @@ export function Sidebar() {
         </span>
         <div>
           <span className="block text-lg font-semibold text-surface-900">SecAdmin</span>
-          <span className="block text-[11px] font-medium uppercase tracking-wide text-surface-400">Telegram SOC</span>
+          <span className="block text-[11px] font-medium uppercase tracking-wide text-surface-400">{t("telegram_soc")}</span>
         </div>
       </div>
       <nav className="flex-1 space-y-5 overflow-y-auto p-3">
@@ -59,9 +61,9 @@ export function Sidebar() {
           const visibleItems = section.items.filter((item) => item.roles.includes(role));
           if (visibleItems.length === 0) return null;
           return (
-            <div key={section.label}>
+            <div key={section.labelKey}>
               <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
-                {section.label}
+                {t(section.labelKey)}
               </p>
               <div className="space-y-1">
                 {visibleItems.map((item) => (
@@ -81,7 +83,7 @@ export function Sidebar() {
                     <span className="flex h-6 w-7 shrink-0 items-center justify-center rounded border border-current/15 text-[10px] font-semibold">
                       {item.icon}
                     </span>
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate">{t(item.labelKey)}</span>
                   </NavLink>
                 ))}
               </div>

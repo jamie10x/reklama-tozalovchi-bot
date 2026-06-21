@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import { ReactNode } from "react";
+import type { ObservedMessage } from "../api/queries";
 
 export const severityBadge: Record<string, string> = {
   critical: "badge-critical",
@@ -130,6 +131,113 @@ export function KeyValue({ label, value }: { label: string; value: ReactNode }) 
     <div className="flex items-center justify-between gap-4 border-b border-surface-100 py-2 text-sm last:border-b-0">
       <span className="text-surface-500">{label}</span>
       <span className="text-right font-medium text-surface-900">{value}</span>
+    </div>
+  );
+}
+
+function compactJsonValue(value: unknown) {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+export function detectionReasons(message: ObservedMessage) {
+  const result = message.detection_result;
+  const security = result?.security as { reasons?: string[]; detected_indicators?: Record<string, string[]> } | undefined;
+  const ad = result?.ad as { reasons?: string[]; detected_domains?: string[]; detected_telegram_entities?: string[] } | undefined;
+  const direct = result?.reasons as string[] | undefined;
+  const reasons = [
+    ...(direct ?? []),
+    ...(security?.reasons ?? []),
+    ...(ad?.reasons ?? []),
+    ...Object.entries(security?.detected_indicators ?? {}).flatMap(([key, values]) =>
+      values.map((value) => `${key}: ${value}`),
+    ),
+    ...(ad?.detected_domains ?? []).map((item) => `domain: ${item}`),
+    ...(ad?.detected_telegram_entities ?? []).map((item) => `telegram: ${item}`),
+  ];
+  return [...new Set(reasons.filter(Boolean))].slice(0, 10);
+}
+
+export function senderName(message: ObservedMessage) {
+  const name = [message.sender_first_name, message.sender_last_name].filter(Boolean).join(" ");
+  if (message.sender_username) return `@${message.sender_username}`;
+  return name || (message.sender_id ? String(message.sender_id) : "Unknown sender");
+}
+
+export function MessageInfoCard({
+  message,
+  action,
+  compact = false,
+}: {
+  message: ObservedMessage;
+  action?: ReactNode;
+  compact?: boolean;
+}) {
+  const reasons = detectionReasons(message);
+  const scoreRows = [
+    ["Ad", message.ad_score],
+    ["Security", message.security_score],
+    ["AI", message.ai_score],
+  ].filter(([, value]) => value !== null && value !== undefined);
+
+  return (
+    <div className="rounded-lg border border-surface-200 bg-white p-4">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge value={message.detection_status} />
+            <Badge value={message.message_type} tone="badge-info" />
+            {message.is_forwarded && <Badge value="forwarded" tone="badge-medium" />}
+            {message.is_edited && <Badge value="edited" tone="badge-medium" />}
+            <span className="text-xs text-surface-500">{relativeTime(message.created_at)}</span>
+          </div>
+          <div className="mt-3 grid gap-2 text-xs text-surface-500 sm:grid-cols-3">
+            <span className="font-mono">chat={message.chat_id}</span>
+            <span className="font-mono">msg={message.message_id}</span>
+            <span className="font-mono">user={message.sender_id ?? "-"}</span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-semibold text-surface-900">{senderName(message)}</span>
+            {message.reply_to_message_id && (
+              <span className="font-mono text-xs text-surface-500">reply={message.reply_to_message_id}</span>
+            )}
+          </div>
+          <p className={clsx("mt-3 whitespace-pre-wrap rounded-lg bg-surface-50 p-3 text-sm text-surface-800", compact && "line-clamp-4")}>
+            {message.text || (message.has_text ? "Text hidden by capture policy" : "No message text")}
+          </p>
+          {reasons.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {reasons.map((reason) => (
+                <span key={reason} className="rounded-full bg-surface-100 px-2 py-1 text-xs text-surface-600">
+                  {reason}
+                </span>
+              ))}
+            </div>
+          )}
+          {!compact && message.detection_result && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs font-medium text-surface-500">Detection JSON</summary>
+              <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-surface-950 p-3 text-xs text-white">
+                {JSON.stringify(message.detection_result, null, 2)}
+              </pre>
+            </details>
+          )}
+        </div>
+        <div className="space-y-3">
+          <RiskMeter score={message.risk_score} />
+          {scoreRows.length > 0 && (
+            <div className="rounded-lg border border-surface-100 p-3">
+              {scoreRows.map(([label, value]) => (
+                <KeyValue key={label} label={String(label)} value={<span className="font-mono">{compactJsonValue(value)}</span>} />
+              ))}
+            </div>
+          )}
+          {action}
+        </div>
+      </div>
     </div>
   );
 }
