@@ -26,7 +26,7 @@ interface EventListParams {
   chat_id?: number;
 }
 
-interface Event {
+export interface Event {
   id: string;
   event_number: number;
   chat_id: number;
@@ -79,6 +79,22 @@ export function useEvent(id: string) {
   });
 }
 
+export function useUpdateEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      apiFetch<Event>(`/api/v1/events/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: (event) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["event", event.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 interface Indicator {
   id: string;
   indicator_type: string;
@@ -116,7 +132,7 @@ export function useIndicators(params: {
   });
 }
 
-interface Group {
+export interface Group {
   telegram_chat_id: number;
   title: string | null;
   username: string | null;
@@ -135,6 +151,14 @@ export function useGroups() {
   return useQuery<GroupListResponse>({
     queryKey: ["groups"],
     queryFn: () => apiFetch("/api/v1/groups"),
+  });
+}
+
+export function useGroup(chatId?: number) {
+  return useQuery<Group>({
+    queryKey: ["group", chatId],
+    queryFn: () => apiFetch(`/api/v1/groups/${chatId}`),
+    enabled: !!chatId,
   });
 }
 
@@ -324,7 +348,7 @@ export function useUserIntel(telegramId?: number) {
   });
 }
 
-interface CaseItem {
+export interface CaseItem {
   id: string;
   case_number: number;
   title: string;
@@ -352,6 +376,28 @@ export function useCases(params: { limit?: number; status?: string; severity?: s
   return useQuery<CaseListResponse>({
     queryKey: ["cases", params],
     queryFn: () => apiFetch(`/api/v1/cases${qs ? `?${qs}` : ""}`),
+  });
+}
+
+export interface CaseCreateRequest {
+  title: string;
+  severity?: string;
+  description?: string | null;
+  assigned_officer_id?: number | null;
+}
+
+export function useCreateCase() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CaseCreateRequest) =>
+      apiFetch<CaseItem>("/api/v1/cases", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }
 
@@ -416,6 +462,9 @@ export function useCreateEnforcementAction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enforcement"] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-live"] });
     },
   });
 }

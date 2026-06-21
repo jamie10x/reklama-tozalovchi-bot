@@ -30,6 +30,12 @@
     - `full_text`
 - Suspicious detection should prioritize Uzbek Latin, Uzbek Cyrillic, English, and Russian.
 - OSINT scope is Telegram-only unless explicitly expanded later.
+- Admin UI direction is a Telegram SOC console:
+  - Command Center first, not a generic metrics dashboard.
+  - Group Health and Group Operations pages are the source of truth for bot permission readiness.
+  - Live Triage is for fast response: delete, trust, mute, ban, and create case.
+  - Member Intel should remain Telegram-only and link from observed member IDs.
+  - Empty states should explain Telegram Bot API limits instead of looking broken.
 
 ## Useful Commands
 ```bash

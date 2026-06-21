@@ -9,6 +9,7 @@ import { CommandsPage } from "./pages/Commands";
 import { DashboardPage } from "./pages/Dashboard";
 import { EventDetailPage } from "./pages/EventDetail";
 import { EventsPage } from "./pages/Events";
+import { GroupDetailPage } from "./pages/GroupDetail";
 import { GroupsPage } from "./pages/Groups";
 import { HealthPage } from "./pages/Health";
 import { IndicatorsPage } from "./pages/Indicators";
@@ -53,6 +54,7 @@ export function App() {
         <Route path="users" element={<UsersPage />} />
         <Route path="members-osint" element={<MemberOSINTPage />} />
         <Route path="groups" element={<GroupsPage />} />
+        <Route path="groups/:chatId" element={<GroupDetailPage />} />
         <Route path="commands" element={<CommandsPage />} />
         <Route path="cases" element={<CasesPage />} />
         <Route path="officers" element={<OfficersPage />} />

@@ -5,20 +5,26 @@ import {
   useEnforcement,
   useGroups,
 } from "../api/queries";
+import { Badge, EmptyState, PageHeader } from "../components/soc";
 
-const actions: { value: EnforcementActionType; label: string }[] = [
-  { value: "refresh_group_permissions", label: "Guruh ruxsatlarini tekshirish" },
-  { value: "delete_message", label: "Xabarni o'chirish" },
-  { value: "refresh_member", label: "A'zoni tekshirish" },
-  { value: "trust_sender", label: "A'zoni ishonchli qilish" },
-  { value: "restrict_member", label: "A'zoni cheklash" },
-  { value: "mute_member", label: "A'zoni 1 soat mute qilish" },
-  { value: "ban_member", label: "A'zoni ban qilish" },
-  { value: "get_chat_info", label: "Guruh ma'lumotlarini olish" },
-  { value: "get_chat_administrators", label: "Adminlar ro'yxatini olish" },
-  { value: "get_chat_member_count", label: "A'zolar sonini olish" },
-  { value: "get_user_profile_photos", label: "Profil rasmlari metadata" },
-  { value: "save_observed_state", label: "Kuzatilgan holatni saqlash" },
+const actions: {
+  value: EnforcementActionType;
+  label: string;
+  scope: "group" | "message" | "member" | "intel";
+  requires: string;
+}[] = [
+  { value: "refresh_group_permissions", label: "Refresh permissions", scope: "group", requires: "Chat ID" },
+  { value: "get_chat_info", label: "Get chat info", scope: "intel", requires: "Chat ID" },
+  { value: "get_chat_administrators", label: "Get administrators", scope: "intel", requires: "Chat ID" },
+  { value: "get_chat_member_count", label: "Get member count", scope: "intel", requires: "Chat ID" },
+  { value: "save_observed_state", label: "Save observed state", scope: "group", requires: "Chat ID" },
+  { value: "delete_message", label: "Delete message", scope: "message", requires: "Chat ID + Message ID" },
+  { value: "refresh_member", label: "Refresh member", scope: "member", requires: "Chat ID + User ID" },
+  { value: "trust_sender", label: "Trust sender", scope: "member", requires: "Chat ID + User ID" },
+  { value: "restrict_member", label: "Restrict member", scope: "member", requires: "Chat ID + User ID" },
+  { value: "mute_member", label: "Mute member for 1 hour", scope: "member", requires: "Chat ID + User ID" },
+  { value: "ban_member", label: "Ban member", scope: "member", requires: "Chat ID + User ID" },
+  { value: "get_user_profile_photos", label: "Profile photo metadata", scope: "intel", requires: "User ID" },
 ];
 
 function parseOptionalInt(value: string): number | undefined {
@@ -37,6 +43,7 @@ export function CommandsPage() {
   const [messageId, setMessageId] = useState("");
   const [userId, setUserId] = useState("");
   const [result, setResult] = useState<string | null>(null);
+  const selectedAction = actions.find((action) => action.value === actionType) ?? actions[0];
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -55,17 +62,28 @@ export function CommandsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-surface-900">Bot buyruqlari</h2>
-        <p className="mt-1 text-sm text-surface-500">
-          Admin paneldan bot bajaradigan Telegram amallarini navbatga qo'yish
-        </p>
-      </div>
+      <PageHeader
+        title="Bot Commands"
+        description="Queue Telegram Bot API actions. Commands execute only where the bot has authorized access and permissions."
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <form onSubmit={submit} className="card space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {actions.slice(0, 4).map((action) => (
+              <button
+                key={action.value}
+                type="button"
+                className={actionType === action.value ? "btn-primary justify-start px-3" : "btn-secondary justify-start px-3"}
+                onClick={() => setActionType(action.value)}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+
           <div>
-            <label className="mb-1 block text-xs font-medium text-surface-500">Buyruq</label>
+            <label className="mb-1 block text-xs font-medium text-surface-500">Command</label>
             <select
               className="input"
               value={actionType}
@@ -79,10 +97,20 @@ export function CommandsPage() {
             </select>
           </div>
 
+          <div className="rounded-lg border border-surface-200 bg-surface-50 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-surface-900">{selectedAction.label}</p>
+                <p className="text-xs text-surface-500">Required: {selectedAction.requires}</p>
+              </div>
+              <Badge value={selectedAction.scope} />
+            </div>
+          </div>
+
           <div>
-            <label className="mb-1 block text-xs font-medium text-surface-500">Guruh</label>
+            <label className="mb-1 block text-xs font-medium text-surface-500">Group</label>
             <select className="input" value={chatId} onChange={(event) => setChatId(event.target.value)}>
-              <option value="">Chat ID qo'lda kiritiladi</option>
+              <option value="">Manual Chat ID</option>
               {groups?.items.map((group) => (
                 <option key={group.telegram_chat_id} value={group.telegram_chat_id}>
                   {group.title || group.telegram_chat_id} ({group.telegram_chat_id})
@@ -94,7 +122,7 @@ export function CommandsPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-surface-500">Chat ID</label>
-              <input className="input" value={chatId} onChange={(event) => setChatId(event.target.value)} />
+              <input className="input" value={chatId} onChange={(event) => setChatId(event.target.value)} placeholder="-100..." />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-surface-500">Message ID</label>
@@ -108,21 +136,21 @@ export function CommandsPage() {
 
           <div className="flex items-center gap-3">
             <button className="btn-primary" disabled={createAction.isPending}>
-              Buyruq yuborish
+              Queue command
             </button>
             {result && <span className="text-sm text-green-700">{result}</span>}
-            {createAction.error && <span className="text-sm text-red-700">Buyruq rad etildi</span>}
+            {createAction.error && <span className="text-sm text-red-700">Command rejected</span>}
           </div>
         </form>
 
         <div className="card">
-          <h3 className="card-title mb-4">So'nggi buyruqlar</h3>
+          <h3 className="card-title mb-4">Recent commands</h3>
           <div className="space-y-3">
             {enforcement?.items.map((item) => (
               <div key={item.id} className="rounded-lg border border-surface-200 p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium">{item.action_type}</span>
-                  <span className="badge badge-info">{item.status}</span>
+                  <Badge value={item.status} />
                 </div>
                 <p className="mt-1 font-mono text-xs text-surface-500">
                   chat={item.target_chat_id || "-"} user={item.target_user_id || "-"} msg={item.target_message_id || "-"}
@@ -135,7 +163,7 @@ export function CommandsPage() {
               </div>
             ))}
             {enforcement?.items.length === 0 && (
-              <p className="text-sm text-surface-500">Hali buyruqlar yo'q</p>
+              <EmptyState title="No commands queued yet" />
             )}
           </div>
         </div>

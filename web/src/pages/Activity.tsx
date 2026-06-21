@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   CaptureSettings,
   useActivityMessages,
@@ -6,10 +7,13 @@ import {
   useGroups,
   useUpdateCaptureSettings,
 } from "../api/queries";
+import { Badge, EmptyState, PageHeader, RiskMeter, SkeletonRows, relativeTime } from "../components/soc";
 
 export function ActivityPage() {
   const { data: groups } = useGroups();
-  const [chatId, setChatId] = useState<number | undefined>(undefined);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialChatId = searchParams.get("chat_id") ? Number(searchParams.get("chat_id")) : undefined;
+  const [chatId, setChatId] = useState<number | undefined>(initialChatId);
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const { data: settings } = useCaptureSettings(chatId);
   const updateSettings = useUpdateCaptureSettings(chatId);
@@ -28,14 +32,21 @@ export function ActivityPage() {
     updateSettings.mutate({ capture_mode });
   };
 
+  const updateChatId = (value: number | undefined) => {
+    setChatId(value);
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set("chat_id", String(value));
+    else next.delete("chat_id");
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-surface-900">Group Activity</h2>
-        <p className="mt-1 text-sm text-surface-500">
-          Stored future message metadata and flagged evidence
-        </p>
-      </div>
+      <PageHeader
+        title="Activity Store"
+        description="Search future message metadata and retained evidence captured by authorized groups."
+        action={chatId && <Link to={`/groups/${chatId}`} className="btn-secondary">Group operations</Link>}
+      />
 
       <div className="card mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="grid gap-4 md:grid-cols-2">
@@ -45,7 +56,7 @@ export function ActivityPage() {
               className="input"
               value={chatId ?? ""}
               onChange={(event) =>
-                setChatId(event.target.value ? Number(event.target.value) : undefined)
+                updateChatId(event.target.value ? Number(event.target.value) : undefined)
               }
             >
               <option value="">All groups</option>
@@ -85,16 +96,18 @@ export function ActivityPage() {
               ))}
             </div>
           )}
+          {!chatId && <p className="mt-2 text-xs text-surface-500">Select a group to tune capture policy.</p>}
         </div>
       </div>
 
       <div className="card">
         {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="h-12 animate-pulse rounded bg-surface-100" />
-            ))}
-          </div>
+          <SkeletonRows rows={6} />
+        ) : data?.items.length === 0 ? (
+          <EmptyState
+            title="No captured activity for this view"
+            description="The bot cannot import old Telegram history. Activity appears only after the bot receives future group updates, and text retention depends on the selected capture mode."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -105,6 +118,7 @@ export function ActivityPage() {
                   <th className="pb-3 font-medium">Message</th>
                   <th className="pb-3 font-medium">Sender</th>
                   <th className="pb-3 font-medium">Status</th>
+                  <th className="pb-3 font-medium">Risk</th>
                   <th className="pb-3 font-medium">Text</th>
                 </tr>
               </thead>
@@ -112,7 +126,7 @@ export function ActivityPage() {
                 {data?.items.map((message) => (
                   <tr key={message.id} className="border-b border-surface-100 align-top">
                     <td className="py-3 text-xs text-surface-500">
-                      {new Date(message.created_at).toLocaleString("uz-UZ")}
+                      {relativeTime(message.created_at)}
                     </td>
                     <td className="py-3 font-mono text-xs">{message.chat_id}</td>
                     <td className="py-3 font-mono text-xs">{message.message_id}</td>
@@ -120,7 +134,10 @@ export function ActivityPage() {
                       {message.sender_username ? `@${message.sender_username}` : message.sender_id || "-"}
                     </td>
                     <td className="py-3">
-                      <span className="badge badge-info">{message.detection_status}</span>
+                      <Badge value={message.detection_status} />
+                    </td>
+                    <td className="w-28 py-3">
+                      <RiskMeter score={message.risk_score} />
                     </td>
                     <td className="max-w-xl py-3 text-surface-700">
                       {message.text || (message.has_text ? "Hidden by policy" : "-")}
