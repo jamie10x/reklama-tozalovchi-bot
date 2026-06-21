@@ -1,7 +1,20 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
+
+EnforcementActionType = Literal[
+    "delete_message",
+    "trust_sender",
+    "block_indicator",
+    "allow_indicator",
+    "refresh_member",
+    "refresh_group_permissions",
+    "restrict_member",
+    "mute_member",
+    "ban_member",
+]
 
 
 class EnforcementActionResponse(BaseModel):
@@ -10,7 +23,9 @@ class EnforcementActionResponse(BaseModel):
     target_chat_id: int | None
     target_message_id: int | None
     target_user_id: int | None
+    target_indicator_id: uuid.UUID | None
     status: str
+    result: dict | None
     created_at: datetime
     completed_at: datetime | None
 
@@ -19,7 +34,7 @@ class EnforcementActionResponse(BaseModel):
 
 
 class EnforcementActionCreateRequest(BaseModel):
-    action_type: str
+    action_type: EnforcementActionType
     target_chat_id: int | None = None
     target_message_id: int | None = None
     target_user_id: int | None = None

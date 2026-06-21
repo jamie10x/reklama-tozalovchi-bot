@@ -133,6 +133,8 @@ class SecAdminWorker:
                 event_type="security_threat",
                 severity=security_result.get("severity", "low"),
                 score=security_result.get("score", 0),
+                title="Security attention required",
+                message_excerpt=entry.text[:500] if entry.text else None,
                 detection_reasons={"reasons": security_result.get("reasons", [])},
                 detected_indicators={"indicator_ids": indicator_ids},
                 ad_score=ad_result.get("score") if ad_result else None,

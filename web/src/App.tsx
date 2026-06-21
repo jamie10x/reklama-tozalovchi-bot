@@ -4,6 +4,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { useAuth } from "./stores/auth";
 import { AuditLogPage } from "./pages/AuditLog";
 import { CasesPage } from "./pages/Cases";
+import { CommandsPage } from "./pages/Commands";
 import { DashboardPage } from "./pages/Dashboard";
 import { EventDetailPage } from "./pages/EventDetail";
 import { EventsPage } from "./pages/Events";
@@ -46,6 +47,7 @@ export function App() {
         <Route path="indicators" element={<IndicatorsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="groups" element={<GroupsPage />} />
+        <Route path="commands" element={<CommandsPage />} />
         <Route path="cases" element={<CasesPage />} />
         <Route path="officers" element={<OfficersPage />} />
         <Route path="audit" element={<AuditLogPage />} />

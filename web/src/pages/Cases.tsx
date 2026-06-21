@@ -10,9 +10,9 @@ const severityBadge: Record<string, string> = {
 
 const statusBadge: Record<string, string> = {
   open: "badge-critical",
-  investigating: "badge-high",
+  in_progress: "badge-high",
   resolved: "badge-low",
-  dismissed: "badge-info",
+  closed: "badge-info",
 };
 
 export function CasesPage() {
@@ -38,9 +38,9 @@ export function CasesPage() {
             <select value={status} onChange={(e) => setStatus(e.target.value)} className="input">
               <option value="">Barchasi</option>
               <option value="open">Ochiq</option>
-              <option value="investigating">Tekshirilmoqda</option>
+              <option value="in_progress">Jarayonda</option>
               <option value="resolved">Hal qilingan</option>
-              <option value="dismissed">Rad etilgan</option>
+              <option value="closed">Yopilgan</option>
             </select>
           </div>
           <div className="min-w-[160px]">
@@ -81,12 +81,12 @@ export function CasesPage() {
                     <td className="py-3 font-mono text-xs">{c.case_number}</td>
                     <td className="py-3 font-medium">{c.title}</td>
                     <td className="py-3">
-                      <span className={`badge ${severityBadge[c.severity]}`}>
+                      <span className={`badge ${severityBadge[c.severity] || "badge-info"}`}>
                         {c.severity}
                       </span>
                     </td>
                     <td className="py-3">
-                      <span className={`badge ${statusBadge[c.status]}`}>
+                      <span className={`badge ${statusBadge[c.status] || "badge-info"}`}>
                         {c.status}
                       </span>
                     </td>

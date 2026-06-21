@@ -5,6 +5,7 @@ import contextlib
 from datetime import datetime, timezone
 
 from aiogram import Bot
+from aiogram.types import ChatPermissions
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
@@ -48,10 +49,18 @@ class EnforcementBridge:
                 await self._bot.restrict_chat_member(
                     chat_id=chat_id,
                     user_id=user_id,
-                    can_send_messages=True,
-                    can_send_media_messages=True,
-                    can_send_other_messages=True,
-                    can_add_web_page_previews=True,
+                    permissions=ChatPermissions(
+                        can_send_messages=True,
+                        can_send_audios=True,
+                        can_send_documents=True,
+                        can_send_photos=True,
+                        can_send_videos=True,
+                        can_send_video_notes=True,
+                        can_send_voice_notes=True,
+                        can_send_polls=True,
+                        can_send_other_messages=True,
+                        can_add_web_page_previews=True,
+                    ),
                 )
                 return {"trusted": True}
             except Exception as e:
@@ -64,10 +73,11 @@ class EnforcementBridge:
                 await self._bot.restrict_chat_member(
                     chat_id=chat_id,
                     user_id=user_id,
-                    can_send_messages=False,
-                    can_send_media_messages=False,
-                    can_send_other_messages=False,
-                    can_add_web_page_previews=False,
+                    permissions=ChatPermissions(
+                        can_send_messages=False,
+                        can_send_other_messages=False,
+                        can_add_web_page_previews=False,
+                    ),
                 )
                 return {"restricted": True}
             except Exception as e:
@@ -77,11 +87,11 @@ class EnforcementBridge:
             if user_id is None or chat_id is None:
                 return {"error": "mute_member requires target_user_id and target_chat_id"}
             try:
-                until_date = datetime.now(timezone.utc).timestamp() + 3600
+                until_date = int(datetime.now(timezone.utc).timestamp()) + 3600
                 await self._bot.restrict_chat_member(
                     chat_id=chat_id,
                     user_id=user_id,
-                    can_send_messages=False,
+                    permissions=ChatPermissions(can_send_messages=False),
                     until_date=until_date,
                 )
                 return {"muted": True, "until": until_date}

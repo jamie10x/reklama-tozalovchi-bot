@@ -1,5 +1,10 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useEvent } from "../api/queries";
+import {
+  EnforcementActionType,
+  useCreateEnforcementAction,
+  useEvent,
+} from "../api/queries";
 
 const severityBadge: Record<string, string> = {
   critical: "badge-critical",
@@ -10,14 +15,38 @@ const severityBadge: Record<string, string> = {
 
 const statusBadge: Record<string, string> = {
   open: "badge-critical",
-  investigating: "badge-high",
+  claimed: "badge-high",
+  confirmed: "badge-medium",
+  false_positive: "badge-info",
+  escalated: "badge-critical",
   resolved: "badge-low",
-  dismissed: "badge-info",
 };
 
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: event, isLoading } = useEvent(id!);
+  const command = useCreateEnforcementAction();
+  const [queuedAction, setQueuedAction] = useState<string | null>(null);
+
+  const queueAction = (actionType: EnforcementActionType) => {
+    if (!event) return;
+    command.mutate(
+      {
+        action_type: actionType,
+        target_chat_id: event.chat_id,
+        target_message_id:
+          actionType === "delete_message" ? event.message_id : undefined,
+        target_user_id:
+          actionType === "refresh_group_permissions" ||
+          actionType === "delete_message"
+            ? undefined
+            : event.sender_id,
+      },
+      {
+        onSuccess: (action) => setQueuedAction(`${action.action_type}: ${action.status}`),
+      },
+    );
+  };
 
   if (isLoading) {
     return (
@@ -58,7 +87,7 @@ export function EventDetailPage() {
             <div className="flex justify-between">
               <dt className="text-surface-500">Daraja</dt>
               <dd>
-                <span className={`badge ${severityBadge[event.severity]}`}>
+                <span className={`badge ${severityBadge[event.severity] || "badge-info"}`}>
                   {event.severity}
                 </span>
               </dd>
@@ -70,7 +99,7 @@ export function EventDetailPage() {
             <div className="flex justify-between">
               <dt className="text-surface-500">Status</dt>
               <dd>
-                <span className={`badge ${statusBadge[event.status]}`}>
+                <span className={`badge ${statusBadge[event.status] || "badge-info"}`}>
                   {event.status}
                 </span>
               </dd>
@@ -102,6 +131,87 @@ export function EventDetailPage() {
               <dd>{new Date(event.updated_at).toLocaleString("uz-UZ")}</dd>
             </div>
           </dl>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <div className="card">
+          <h3 className="card-title mb-4">Xabar dalili</h3>
+          <div className="rounded-lg border border-surface-200 bg-surface-50 p-4 text-sm leading-6 text-surface-800">
+            {event.message_excerpt || "Xabar matni saqlanmagan"}
+          </div>
+          <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase text-surface-500">Sabablar</p>
+              <pre className="max-h-48 overflow-auto rounded-lg bg-surface-900 p-3 text-xs text-white">
+                {JSON.stringify(event.detection_reasons || {}, null, 2)}
+              </pre>
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase text-surface-500">Indikatorlar</p>
+              <pre className="max-h-48 overflow-auto rounded-lg bg-surface-900 p-3 text-xs text-white">
+                {JSON.stringify(event.detected_indicators || {}, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="card-title mb-4">Bot buyruqlari</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              className="btn-danger"
+              disabled={!event.message_id || command.isPending}
+              onClick={() => queueAction("delete_message")}
+            >
+              Xabarni o'chirish
+            </button>
+            <button
+              className="btn-secondary"
+              disabled={command.isPending}
+              onClick={() => queueAction("refresh_group_permissions")}
+            >
+              Ruxsatlarni tekshirish
+            </button>
+            <button
+              className="btn-secondary"
+              disabled={!event.sender_id || command.isPending}
+              onClick={() => queueAction("refresh_member")}
+            >
+              A'zoni tekshirish
+            </button>
+            <button
+              className="btn-secondary"
+              disabled={!event.sender_id || command.isPending}
+              onClick={() => queueAction("trust_sender")}
+            >
+              Ishonchli qilish
+            </button>
+            <button
+              className="btn-secondary"
+              disabled={!event.sender_id || command.isPending}
+              onClick={() => queueAction("mute_member")}
+            >
+              1 soat mute
+            </button>
+            <button
+              className="btn-danger"
+              disabled={!event.sender_id || command.isPending}
+              onClick={() => queueAction("ban_member")}
+            >
+              Ban qilish
+            </button>
+          </div>
+          {queuedAction && (
+            <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+              Buyruq navbatga qo'shildi: {queuedAction}
+            </p>
+          )}
+          {command.error && (
+            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              Buyruq yuborilmadi
+            </p>
+          )}
         </div>
       </div>
     </div>

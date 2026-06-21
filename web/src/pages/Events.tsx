@@ -12,9 +12,11 @@ const severityBadge: Record<string, string> = {
 
 const statusBadge: Record<string, string> = {
   open: "badge-critical",
-  investigating: "badge-high",
+  claimed: "badge-high",
+  confirmed: "badge-medium",
+  false_positive: "badge-info",
+  escalated: "badge-critical",
   resolved: "badge-low",
-  dismissed: "badge-info",
 };
 
 export function EventsPage() {
@@ -26,7 +28,7 @@ export function EventsPage() {
   const debouncedType = useDebounce(eventType, 300);
 
   const { data, isLoading } = useEvents({
-    limit: 50,
+    limit: 200,
     status: debouncedStatus || undefined,
     severity: debouncedSeverity || undefined,
     event_type: debouncedType || undefined,
@@ -36,7 +38,9 @@ export function EventsPage() {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-surface-900">Voqealar</h2>
-        <p className="mt-1 text-sm text-surface-500">Barcha xavfsizlik voqealari</p>
+        <p className="mt-1 text-sm text-surface-500">
+          Bot aniqlagan oxirgi 200 ta xavfsizlik va reklama voqealari
+        </p>
       </div>
 
       <div className="card mb-6">
@@ -50,9 +54,11 @@ export function EventsPage() {
             >
               <option value="">Barchasi</option>
               <option value="open">Ochiq</option>
-              <option value="investigating">Tekshirilmoqda</option>
+              <option value="claimed">Qabul qilingan</option>
+              <option value="confirmed">Tasdiqlangan</option>
+              <option value="escalated">Escalated</option>
               <option value="resolved">Hal qilingan</option>
-              <option value="dismissed">Rad etilgan</option>
+              <option value="false_positive">False positive</option>
             </select>
           </div>
           <div className="min-w-[160px]">
@@ -78,10 +84,7 @@ export function EventsPage() {
             >
               <option value="">Barchasi</option>
               <option value="advertisement">Reklama</option>
-              <option value="scam">Firibgarlik</option>
-              <option value="spam">Spam</option>
-              <option value="phishing">Phishing</option>
-              <option value="malicious">Zararli</option>
+              <option value="security_threat">Security threat</option>
             </select>
           </div>
         </div>

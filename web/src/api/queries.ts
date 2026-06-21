@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./client";
 
 interface DashboardStats {
@@ -35,7 +35,15 @@ interface Event {
   event_type: string;
   severity: string;
   score: number;
+  confidence: number | null;
   title: string | null;
+  message_excerpt: string | null;
+  detection_reasons: Record<string, unknown> | null;
+  detected_indicators: Record<string, unknown> | null;
+  ad_score: number | null;
+  security_score: number | null;
+  ai_score: number | null;
+  ai_analysis: Record<string, unknown> | null;
   status: string;
   assigned_officer_id: number | null;
   created_at: string;
@@ -249,5 +257,69 @@ export function useHealth() {
     queryKey: ["health"],
     queryFn: () => apiFetch("/api/v1/health"),
     refetchInterval: 30_000,
+  });
+}
+
+export type EnforcementActionType =
+  | "delete_message"
+  | "trust_sender"
+  | "block_indicator"
+  | "allow_indicator"
+  | "refresh_member"
+  | "refresh_group_permissions"
+  | "restrict_member"
+  | "mute_member"
+  | "ban_member";
+
+export interface EnforcementAction {
+  id: string;
+  action_type: EnforcementActionType;
+  target_chat_id: number | null;
+  target_message_id: number | null;
+  target_user_id: number | null;
+  target_indicator_id: string | null;
+  status: string;
+  result: Record<string, unknown> | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface EnforcementActionRequest {
+  action_type: EnforcementActionType;
+  target_chat_id?: number | null;
+  target_message_id?: number | null;
+  target_user_id?: number | null;
+  target_indicator_id?: string | null;
+}
+
+export function useCreateEnforcementAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: EnforcementActionRequest) =>
+      apiFetch<EnforcementAction>("/api/v1/enforcement/actions", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enforcement"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+}
+
+export function useEnforcement(params: {
+  limit?: number;
+  status?: string;
+  action_type?: EnforcementActionType;
+} = {}) {
+  const search = new URLSearchParams();
+  if (params.limit) search.set("limit", String(params.limit));
+  if (params.status) search.set("status", params.status);
+  if (params.action_type) search.set("action_type", params.action_type);
+  const qs = search.toString();
+
+  return useQuery<{ items: EnforcementAction[]; total: number }>({
+    queryKey: ["enforcement", params],
+    queryFn: () => apiFetch(`/api/v1/enforcement${qs ? `?${qs}` : ""}`),
   });
 }

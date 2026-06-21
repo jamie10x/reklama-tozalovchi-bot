@@ -8,6 +8,7 @@ const navItems = [
   { to: "/indicators", label: "Indikatorlar", icon: "◆", roles: ["super_admin", "analyst"] },
   { to: "/users", label: "Foydalanuvchilar", icon: "👤", roles: ["super_admin", "analyst"] },
   { to: "/groups", label: "Guruhlar", icon: "💬", roles: ["super_admin", "analyst", "responder"] },
+  { to: "/commands", label: "Buyruqlar", icon: "▶", roles: ["super_admin", "responder"] },
   { to: "/cases", label: "Ishlar", icon: "📋", roles: ["super_admin", "analyst", "responder"] },
   { to: "/officers", label: "Officerlar", icon: "🔐", roles: ["super_admin"] },
   { to: "/audit", label: "Audit", icon: "📜", roles: ["super_admin", "auditor"] },

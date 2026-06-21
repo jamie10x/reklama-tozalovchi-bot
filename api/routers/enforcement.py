@@ -61,6 +61,40 @@ async def request_delete_message(
     return EnforcementActionResponse.model_validate(action)
 
 
+@router.post("/actions")
+async def create_enforcement_action(
+    body: EnforcementActionCreateRequest,
+    session: AsyncSession = Depends(get_db),
+    officer: Officer = Depends(get_current_officer),
+):
+    repo = EnforcementRepository(session)
+    action = await repo.create(
+        action_type=body.action_type,
+        target_chat_id=body.target_chat_id,
+        target_message_id=body.target_message_id,
+        target_user_id=body.target_user_id,
+        target_indicator_id=body.target_indicator_id,
+        requested_by_officer_id=officer.telegram_id,
+    )
+    officer_repo = OfficerRepository(session)
+    await officer_repo.create_audit_log(
+        officer_id=officer.id,
+        action_type="enforcement_requested",
+        resource_type="enforcement",
+        resource_id=str(action.id),
+        details={
+            "action_type": body.action_type,
+            "target_chat_id": body.target_chat_id,
+            "target_message_id": body.target_message_id,
+            "target_user_id": body.target_user_id,
+            "target_indicator_id": str(body.target_indicator_id)
+            if body.target_indicator_id
+            else None,
+        },
+    )
+    return EnforcementActionResponse.model_validate(action)
+
+
 @router.post("/trust-sender")
 async def trust_sender(
     body: EnforcementActionCreateRequest,
