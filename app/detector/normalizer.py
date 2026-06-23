@@ -16,12 +16,59 @@ SPACED_LINK_PATTERN = re.compile(
 
 ZERO_WIDTH_CHARS = re.compile("[\u200b\u200c\u200d\u2060\u2061\u2062\u2063\u2064\ufeff]")
 
+UZBEK_CYRILLIC_TO_LATIN = {
+    "а": "a",
+    "б": "b",
+    "в": "v",
+    "г": "g",
+    "д": "d",
+    "е": "e",
+    "ё": "yo",
+    "ж": "j",
+    "з": "z",
+    "и": "i",
+    "й": "y",
+    "к": "k",
+    "л": "l",
+    "м": "m",
+    "н": "n",
+    "о": "o",
+    "п": "p",
+    "р": "r",
+    "с": "s",
+    "т": "t",
+    "у": "u",
+    "ф": "f",
+    "х": "x",
+    "ц": "s",
+    "ч": "ch",
+    "ш": "sh",
+    "ъ": "",
+    "ь": "",
+    "э": "e",
+    "ю": "yu",
+    "я": "ya",
+    "ў": "o",
+    "қ": "q",
+    "ғ": "g",
+    "ҳ": "h",
+}
+
 
 def normalize_text(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
     text = ZERO_WIDTH_CHARS.sub("", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+
+def normalize_uzbek_search_text(text: str) -> str:
+    text = normalize_text(text).lower()
+    transliterated = "".join(UZBEK_CYRILLIC_TO_LATIN.get(ch, ch) for ch in text)
+    transliterated = transliterated.replace("o'", "o").replace("g'", "g")
+    transliterated = transliterated.replace("o`", "o").replace("g`", "g")
+    transliterated = transliterated.replace("ʻ", "'").replace("ʼ", "'")
+    return re.sub(r"\s+", " ", transliterated).strip()
 
 
 def normalize_telegram_username(username: str) -> str:

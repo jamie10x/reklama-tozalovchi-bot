@@ -1,10 +1,11 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class OfficerResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     telegram_id: int
     role: str
     display_name: str | None

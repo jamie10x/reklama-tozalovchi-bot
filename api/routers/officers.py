@@ -56,22 +56,22 @@ async def create_officer(
 
 @router.patch("/{officer_id}")
 async def update_officer(
-    officer_id: str,
+    officer_id: uuid.UUID,
     body: OfficerUpdateRequest,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(require_super_admin),
 ):
     repo = OfficerRepository(session)
     if body.role is not None:
-        await repo.update_role(uuid.UUID(officer_id), body.role)
+        await repo.update_role(officer_id, body.role)
     if body.is_active is not None and not body.is_active:
-        await repo.deactivate(uuid.UUID(officer_id))
+        await repo.deactivate(officer_id)
     if body.display_name is not None:
-        existing = await repo.get_by_id(uuid.UUID(officer_id))
+        existing = await repo.get_by_id(officer_id)
         if existing is not None:
             existing.display_name = body.display_name
             await session.flush()
-    updated = await repo.get_by_id(uuid.UUID(officer_id))
+    updated = await repo.get_by_id(officer_id)
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Officer not found")
     return OfficerResponse.model_validate(updated)
@@ -79,12 +79,12 @@ async def update_officer(
 
 @router.delete("/{officer_id}")
 async def deactivate_officer(
-    officer_id: str,
+    officer_id: uuid.UUID,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(require_super_admin),
 ):
     repo = OfficerRepository(session)
-    result = await repo.deactivate(uuid.UUID(officer_id))
+    result = await repo.deactivate(officer_id)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Officer not found")
     return {"ok": True}

@@ -36,11 +36,14 @@ services:
     build:
       dockerfile: Dockerfile.api
     environment:
+      BOT_TOKEN: ${BOT_TOKEN}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-adcleaner}:${POSTGRES_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-adcleaner}
       SECADMIN_DATABASE_URL: postgresql+asyncpg://${SECADMIN_API_USER:-secadmin_api}:${SECADMIN_API_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-adcleaner}
       API_SECRET_KEY: ${API_SECRET_KEY:-change-me-in-production}
       API_DEBUG: ${API_DEBUG:-false}
+      API_SESSION_TTL_HOURS: ${API_SESSION_TTL_HOURS:-24}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -52,10 +55,33 @@ services:
     build:
       dockerfile: Dockerfile.web
     ports:
-      - "127.0.0.1:80:80"
+      - "5001:80"
+    expose:
+      - "80"
     depends_on:
       - api
     restart: unless-stopped
 
+  public-nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/public.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-webroot:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot-webroot:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+
 volumes:
   pgdata:
+  certbot-webroot:
+  letsencrypt:

@@ -42,12 +42,12 @@ async def list_indicators(
 
 @router.get("/{indicator_id}")
 async def get_indicator(
-    indicator_id: str,
+    indicator_id: uuid.UUID,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = IndicatorRepository(session)
-    indicator = await repo.get_by_id(uuid.UUID(indicator_id))
+    indicator = await repo.get_by_id(indicator_id)
     if indicator is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Indicator not found")
     return IndicatorResponse.model_validate(indicator)
@@ -55,13 +55,13 @@ async def get_indicator(
 
 @router.patch("/{indicator_id}")
 async def update_indicator(
-    indicator_id: str,
+    indicator_id: uuid.UUID,
     body: IndicatorUpdateRequest,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = IndicatorRepository(session)
-    indicator = await repo.update_status(uuid.UUID(indicator_id), body.status)
+    indicator = await repo.update_status(indicator_id, body.status)
     if indicator is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Indicator not found")
 
@@ -70,7 +70,7 @@ async def update_indicator(
         officer_id=officer.id,
         action_type="indicator_status_update",
         resource_type="indicator",
-        resource_id=indicator_id,
+        resource_id=str(indicator_id),
         details={"new_status": body.status},
     )
     return IndicatorResponse.model_validate(indicator)

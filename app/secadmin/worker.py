@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database.repositories.activity import ActivityRepository
 from app.database.repositories.events import SecurityEventRepository
 from app.database.repositories.indicators import IndicatorRepository
 from app.database.repositories.outbox import OutboxRepository
@@ -23,6 +24,14 @@ EVENT_RETENTION_DAYS = 90
 WORKER_ID_PREFIX = "worker"
 
 
+def _severity_from_ad_score(score: int) -> str:
+    if score >= 10:
+        return "high"
+    if score >= 6:
+        return "medium"
+    return "low"
+
+
 class SecAdminWorker:
     def __init__(self) -> None:
         self._running = False
@@ -34,6 +43,7 @@ class SecAdminWorker:
         event_repo = SecurityEventRepository(session)
         indicator_repo = IndicatorRepository(session)
         user_repo = ObservedUserRepository(session)
+        activity_repo = ActivityRepository(session)
 
         entries = await outbox_repo.claim_next(
             worker_id=self._worker_id,
@@ -41,6 +51,9 @@ class SecAdminWorker:
         )
 
         for entry in entries:
+            entry_id = entry.id
+            entry_chat_id = entry.chat_id
+            entry_message_id = entry.message_id
             try:
                 await self._process_entry(
                     entry=entry,
@@ -48,17 +61,18 @@ class SecAdminWorker:
                     indicator_repo=indicator_repo,
                     user_repo=user_repo,
                     outbox_repo=outbox_repo,
+                    activity_repo=activity_repo,
                 )
                 await session.flush()
             except Exception:
                 logger.exception(
                     "Failed to process observation %s (chat=%d msg=%d)",
-                    entry.id,
-                    entry.chat_id,
-                    entry.message_id,
+                    entry_id,
+                    entry_chat_id,
+                    entry_message_id,
                 )
                 await session.rollback()
-                await outbox_repo.mark_failed(entry.id)
+                await outbox_repo.mark_failed(entry_id)
                 await session.flush()
 
         return len(entries)
@@ -70,6 +84,7 @@ class SecAdminWorker:
         indicator_repo: IndicatorRepository,
         user_repo: ObservedUserRepository,
         outbox_repo: OutboxRepository,
+        activity_repo: ActivityRepository,
     ) -> None:
         detection_result = entry.detection_result or {}
         ad_result = detection_result.get("ad")
@@ -122,6 +137,8 @@ class SecAdminWorker:
                 event_type="security_threat",
                 severity=security_result.get("severity", "low"),
                 score=security_result.get("score", 0),
+                title="Security attention required",
+                message_excerpt=entry.text[:500] if entry.text else None,
                 detection_reasons={"reasons": security_result.get("reasons", [])},
                 detected_indicators={"indicator_ids": indicator_ids},
                 ad_score=ad_result.get("score") if ad_result else None,
@@ -130,17 +147,42 @@ class SecAdminWorker:
             )
 
             for indicator_id_str in indicator_ids:
-                try:
-                    await indicator_repo.link_to_event(
-                        event_id=event.id,
-                        indicator_id=uuid.UUID(indicator_id_str),
-                    )
-                except Exception:
-                    logger.debug(
-                        "Failed to link indicator %s to event %s",
-                        indicator_id_str,
-                        event.id,
-                    )
+                await self._link_indicator(indicator_repo, event.id, indicator_id_str)
+
+            await activity_repo.link_event(
+                entry.chat_id,
+                entry.message_id,
+                event.id,
+                "security_threat",
+            )
+
+        elif ad_result and ad_result.get("is_advertisement"):
+            now = datetime.now(timezone.utc)
+            score = ad_result.get("score", 0)
+            event = await event_repo.create(
+                chat_id=entry.chat_id,
+                message_id=entry.message_id,
+                sender_id=entry.sender_id,
+                event_type="advertisement",
+                severity=_severity_from_ad_score(score),
+                score=score,
+                title="Advertisement detected",
+                message_excerpt=entry.text[:500] if entry.text else None,
+                detection_reasons={"reasons": ad_result.get("reasons", [])},
+                detected_indicators={"indicator_ids": indicator_ids},
+                ad_score=score,
+                expires_at=now + timedelta(days=EVENT_RETENTION_DAYS),
+            )
+
+            for indicator_id_str in indicator_ids:
+                await self._link_indicator(indicator_repo, event.id, indicator_id_str)
+
+            await activity_repo.link_event(
+                entry.chat_id,
+                entry.message_id,
+                event.id,
+                "advertisement",
+            )
 
         if entry.sender_id is not None and security_result and security_result.get("is_threat"):
             try:
@@ -152,6 +194,24 @@ class SecAdminWorker:
                 logger.warning("Failed to update risk score for user %d", entry.sender_id)
 
         await outbox_repo.mark_completed(entry.id)
+
+    async def _link_indicator(
+        self,
+        indicator_repo: IndicatorRepository,
+        event_id: uuid.UUID,
+        indicator_id_str: str,
+    ) -> None:
+        try:
+            await indicator_repo.link_to_event(
+                event_id=event_id,
+                indicator_id=uuid.UUID(indicator_id_str),
+            )
+        except Exception:
+            logger.debug(
+                "Failed to link indicator %s to event %s",
+                indicator_id_str,
+                event_id,
+            )
 
     async def run_once(self) -> int:
         try:

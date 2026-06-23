@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.database.secadmin_models import Officer, OfficerSession
-from app.database.session import get_secadmin_sessionmaker
+from app.database.session import get_secadmin_sessionmaker, get_sessionmaker
 
 logger = get_logger(__name__)
 
@@ -19,6 +19,23 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with sm() as session:
         try:
             yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+async def get_public_db() -> AsyncGenerator[AsyncSession, None]:
+    sm = get_sessionmaker()
+    async with sm() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()
 
@@ -73,6 +90,20 @@ async def get_current_officer(
             detail="Officer not found or inactive",
         )
     return officer
+
+
+def require_any_role(*roles: str):
+    allowed = set(roles)
+
+    async def _check(officer: Officer = Depends(get_current_officer)) -> Officer:
+        if officer.role == "super_admin" or officer.role in allowed:
+            return officer
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Requires one of roles: {', '.join(sorted(allowed))}",
+        )
+
+    return _check
 
 
 async def require_role(role: str) -> type:

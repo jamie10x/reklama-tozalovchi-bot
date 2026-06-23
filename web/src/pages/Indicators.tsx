@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useIndicators } from "../api/queries";
+import { useI18n } from "../i18n";
 
 const indicatorTypes = [
-  { value: "", label: "Barchasi" },
+  { value: "", labelKey: "all" },
   { value: "domain", label: "Domain" },
   { value: "url", label: "URL" },
   { value: "telegram_username", label: "Telegram username" },
   { value: "email", label: "Email" },
-  { value: "phone", label: "Telefon" },
-  { value: "wallet", label: "Kripto hamyon" },
+  { value: "phone", labelKey: "phone" },
+  { value: "wallet", labelKey: "crypto_wallet" },
   { value: "ip", label: "IP" },
 ];
 
@@ -22,6 +23,7 @@ const statusBadge: Record<string, string> = {
 };
 
 export function IndicatorsPage() {
+  const { t } = useI18n();
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
 
@@ -34,29 +36,29 @@ export function IndicatorsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-surface-900">Indikatorlar</h2>
-        <p className="mt-1 text-sm text-surface-500">Xavfsizlik ko'rsatkichlari bazasi</p>
+        <h2 className="text-2xl font-bold text-surface-900">{t("indicators")}</h2>
+        <p className="mt-1 text-sm text-surface-500">{t("indicators_desc")}</p>
       </div>
 
       <div className="card mb-6">
         <div className="flex flex-wrap gap-4">
           <div className="min-w-[160px]">
-            <label className="mb-1 block text-xs font-medium text-surface-500">Tur</label>
+            <label className="mb-1 block text-xs font-medium text-surface-500">{t("type")}</label>
             <select value={type} onChange={(e) => setType(e.target.value)} className="input">
-              {indicatorTypes.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+              {indicatorTypes.map((option) => (
+                <option key={option.value} value={option.value}>{option.labelKey ? t(option.labelKey) : option.label}</option>
               ))}
             </select>
           </div>
           <div className="min-w-[160px]">
-            <label className="mb-1 block text-xs font-medium text-surface-500">Status</label>
+            <label className="mb-1 block text-xs font-medium text-surface-500">{t("status")}</label>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className="input">
-              <option value="">Barchasi</option>
-              <option value="suspected">Shubhali</option>
-              <option value="confirmed">Tasdiqlangan</option>
-              <option value="blocked">Bloklangan</option>
-              <option value="allowed">Ruxsat etilgan</option>
-              <option value="false_positive">Noto'g'ri</option>
+              <option value="">{t("all")}</option>
+              <option value="suspected">{t("suspected")}</option>
+              <option value="confirmed">{t("confirmed")}</option>
+              <option value="blocked">{t("blocked")}</option>
+              <option value="allowed">{t("allowed")}</option>
+              <option value="false_positive">{t("false_positive")}</option>
             </select>
           </div>
         </div>
@@ -74,12 +76,12 @@ export function IndicatorsPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-200 text-surface-500">
-                  <th className="pb-3 font-medium">Tur</th>
-                  <th className="pb-3 font-medium">Qiymat</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Ko'rilgan</th>
-                  <th className="pb-3 font-medium">Voqealar</th>
-                  <th className="pb-3 font-medium">So'ngi ko'rilgan</th>
+                  <th className="pb-3 font-medium">{t("type")}</th>
+                  <th className="pb-3 font-medium">{t("value")}</th>
+                  <th className="pb-3 font-medium">{t("status")}</th>
+                  <th className="pb-3 font-medium">{t("seen")}</th>
+                  <th className="pb-3 font-medium">{t("events")}</th>
+                  <th className="pb-3 font-medium">{t("last_seen")}</th>
                 </tr>
               </thead>
               <tbody>

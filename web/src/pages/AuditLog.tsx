@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useAuditLogs } from "../api/queries";
+import { useI18n } from "../i18n";
 
 export function AuditLogPage() {
+  const { t } = useI18n();
   const [actionType, setActionType] = useState("");
 
   const { data, isLoading } = useAuditLogs({
@@ -12,24 +14,24 @@ export function AuditLogPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-surface-900">Audit jurnali</h2>
-        <p className="mt-1 text-sm text-surface-500">Barcha o'zgarishlar tarixi</p>
+        <h2 className="text-2xl font-bold text-surface-900">{t("audit_log")}</h2>
+        <p className="mt-1 text-sm text-surface-500">{t("audit_desc")}</p>
       </div>
 
       <div className="card mb-6">
         <div className="min-w-[200px]">
-          <label className="mb-1 block text-xs font-medium text-surface-500">Harakat turi</label>
+          <label className="mb-1 block text-xs font-medium text-surface-500">{t("action_type")}</label>
           <select
             value={actionType}
             onChange={(e) => setActionType(e.target.value)}
             className="input"
           >
-            <option value="">Barchasi</option>
-            <option value="event_status_update">Voqea statusi</option>
-            <option value="indicator_status_update">Indikator statusi</option>
-            <option value="case_created">Ish yaratildi</option>
-            <option value="case_updated">Ish yangilandi</option>
-            <option value="enforcement_requested">Majburiy chora</option>
+            <option value="">{t("all")}</option>
+            <option value="event_status_update">{t("event_status_update")}</option>
+            <option value="indicator_status_update">{t("indicator_status_update")}</option>
+            <option value="case_created">{t("case_created")}</option>
+            <option value="case_updated">{t("case_updated")}</option>
+            <option value="enforcement_requested">{t("enforcement_requested")}</option>
           </select>
         </div>
       </div>
@@ -46,10 +48,10 @@ export function AuditLogPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-200 text-surface-500">
-                  <th className="pb-3 font-medium">Harakat</th>
-                  <th className="pb-3 font-medium">Resurs</th>
-                  <th className="pb-3 font-medium">Resurs ID</th>
-                  <th className="pb-3 font-medium">Vaqt</th>
+                  <th className="pb-3 font-medium">{t("action")}</th>
+                  <th className="pb-3 font-medium">{t("resource")}</th>
+                  <th className="pb-3 font-medium">{t("resource_id")}</th>
+                  <th className="pb-3 font-medium">{t("time")}</th>
                 </tr>
               </thead>
               <tbody>

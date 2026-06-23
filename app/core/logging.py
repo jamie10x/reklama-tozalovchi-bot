@@ -100,7 +100,7 @@ def setup_logging(level: str = "INFO", fmt: str = "json") -> None:
     for logger_name in ("aiogram", "sqlalchemy.engine", "alembic", "httpx"):
         logging.getLogger(logger_name).setLevel(logging.WARNING)
 
-    get_logger(__name__).info("Logging initialized", level=level.upper(), format=fmt)
+    get_logger(__name__).info("Logging initialized", log_level=level.upper(), format=fmt)
 
 
 def generate_request_id() -> str:

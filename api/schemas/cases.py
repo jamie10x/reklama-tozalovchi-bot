@@ -1,10 +1,11 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class CaseResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     case_number: int
     title: str
     severity: str
@@ -40,7 +41,7 @@ class CaseUpdateRequest(BaseModel):
 
 
 class CaseNoteResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     officer_id: int
     content: str
     created_at: datetime

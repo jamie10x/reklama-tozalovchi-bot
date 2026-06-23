@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from app.detector.normalizer import normalize_uzbek_search_text
+
 SUPPORTED_LANGUAGES = ["en", "uz", "ru"]
 
 AD_PHRASES = {
@@ -164,12 +166,17 @@ class PhraseMatcher:
             for category, phrases in categories.items():
                 for phrase in phrases:
                     compiled[lang].append((phrase.lower(), category))
+                    if lang == "uz":
+                        normalized = normalize_uzbek_search_text(phrase)
+                        if normalized != phrase.lower():
+                            compiled[lang].append((normalized, category))
         cls._compiled = compiled
         return compiled
 
     @classmethod
     def find_matches(cls, text: str, languages: list[str] | None = None) -> list[tuple[str, str]]:
         text_lower = text.lower()
+        text_uz = normalize_uzbek_search_text(text)
         all_phrases = cls.get_compiled()
         results: list[tuple[str, str]] = []
 
@@ -178,7 +185,8 @@ class PhraseMatcher:
             if lang not in all_phrases:
                 continue
             for phrase, category in all_phrases[lang]:
-                if phrase in text_lower:
+                haystack = text_uz if lang == "uz" else text_lower
+                if phrase in haystack:
                     results.append((phrase, category))
 
         return results

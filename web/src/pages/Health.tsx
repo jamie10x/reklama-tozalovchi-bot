@@ -1,6 +1,8 @@
 import { useHealth } from "../api/queries";
+import { useI18n } from "../i18n";
 
 export function HealthPage() {
+  const { t } = useI18n();
   const { data, isLoading } = useHealth();
 
   const statusColor = (status: string) => {
@@ -12,13 +14,13 @@ export function HealthPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-surface-900">Tizim sog'ligi</h2>
-        <p className="mt-1 text-sm text-surface-500">Xizmatlar holati</p>
+        <h2 className="text-2xl font-bold text-surface-900">{t("health_title")}</h2>
+        <p className="mt-1 text-sm text-surface-500">{t("health_desc")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="card">
-          <p className="stat-label">API holati</p>
+          <p className="stat-label">{t("api_status")}</p>
           <div className="mt-2 flex items-center gap-3">
             {isLoading ? (
               <div className="h-6 w-20 animate-pulse rounded bg-surface-200" />
@@ -33,7 +35,7 @@ export function HealthPage() {
         </div>
 
         <div className="card">
-          <p className="stat-label">Ma'lumotlar bazasi</p>
+          <p className="stat-label">{t("database")}</p>
           <div className="mt-2 flex items-center gap-3">
             {isLoading ? (
               <div className="h-6 w-20 animate-pulse rounded bg-surface-200" />

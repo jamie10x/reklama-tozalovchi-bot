@@ -43,15 +43,17 @@ class DatabaseSessionMiddleware(BaseMiddleware):
                 if self._ai_service is not None:
                     data["ai_service"] = self._ai_service
             try:
-                return await handler(event, data)
+                result = await handler(event, data)
             except Exception:
                 if secadmin_session is not None:
                     await secadmin_session.rollback()
                 await session.rollback()
                 raise
             else:
+                await session.commit()
                 if secadmin_session is not None:
                     await secadmin_session.commit()
+                return result
             finally:
                 data.pop("session", None)
                 data.pop("secadmin_session", None)

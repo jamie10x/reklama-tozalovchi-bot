@@ -64,15 +64,15 @@ async def create_case(
 
 @router.get("/{case_id}")
 async def get_case(
-    case_id: str,
+    case_id: uuid.UUID,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = CaseRepository(session)
-    case = await repo.get_by_id(uuid.UUID(case_id))
+    case = await repo.get_by_id(case_id)
     if case is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
-    notes = await repo.get_notes(uuid.UUID(case_id))
+    notes = await repo.get_notes(case_id)
     return {
         "case": CaseResponse.model_validate(case),
         "notes": [CaseNoteResponse.model_validate(n) for n in notes],
@@ -81,18 +81,18 @@ async def get_case(
 
 @router.patch("/{case_id}")
 async def update_case(
-    case_id: str,
+    case_id: uuid.UUID,
     body: CaseUpdateRequest,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = CaseRepository(session)
-    case = await repo.get_by_id(uuid.UUID(case_id))
+    case = await repo.get_by_id(case_id)
     if case is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
 
     if body.status is not None:
-        case = await repo.update_status(uuid.UUID(case_id), body.status, body.resolution)
+        case = await repo.update_status(case_id, body.status, body.resolution)
     if body.severity is not None:
         case.severity = body.severity
     if body.title is not None:
@@ -107,7 +107,7 @@ async def update_case(
         officer_id=officer.id,
         action_type="case_updated",
         resource_type="case",
-        resource_id=case_id,
+        resource_id=str(case_id),
         details=body.model_dump(exclude_none=True),
     )
     return CaseResponse.model_validate(case)
@@ -115,14 +115,14 @@ async def update_case(
 
 @router.post("/{case_id}/notes")
 async def add_note(
-    case_id: str,
+    case_id: uuid.UUID,
     body: CaseNoteCreateRequest,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = CaseRepository(session)
     note = await repo.add_note(
-        case_id=uuid.UUID(case_id),
+        case_id=case_id,
         officer_id=officer.telegram_id,
         content=body.content,
     )
@@ -131,15 +131,15 @@ async def add_note(
 
 @router.post("/{case_id}/events/{event_id}")
 async def link_event(
-    case_id: str,
-    event_id: str,
+    case_id: uuid.UUID,
+    event_id: uuid.UUID,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = CaseRepository(session)
     await repo.link_event(
-        case_id=uuid.UUID(case_id),
-        event_id=uuid.UUID(event_id),
+        case_id=case_id,
+        event_id=event_id,
         officer_id=officer.telegram_id,
     )
     return {"ok": True}
@@ -147,13 +147,13 @@ async def link_event(
 
 @router.delete("/{case_id}/events/{event_id}")
 async def unlink_event(
-    case_id: str,
-    event_id: str,
+    case_id: uuid.UUID,
+    event_id: uuid.UUID,
     session: AsyncSession = Depends(get_db),
     officer: Officer = Depends(get_current_officer),
 ):
     repo = CaseRepository(session)
-    ok = await repo.unlink_event(uuid.UUID(case_id), uuid.UUID(event_id))
+    ok = await repo.unlink_event(case_id, event_id)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
     return {"ok": True}

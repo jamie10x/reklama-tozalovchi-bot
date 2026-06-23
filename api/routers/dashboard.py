@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_officer, get_db
+from api.deps import get_current_officer, get_db, get_public_db
 from api.schemas.dashboard import DashboardResponse
 from app.database.models import Chat
 from app.database.repositories.events import SecurityEventRepository
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
 @router.get("")
 async def get_dashboard(
     session: AsyncSession = Depends(get_db),
+    public_session: AsyncSession = Depends(get_public_db),
     officer: Officer = Depends(get_current_officer),
 ):
     event_repo = SecurityEventRepository(session)
@@ -29,7 +30,7 @@ async def get_dashboard(
     ind_result = await session.execute(select(func.count(Indicator.id)))
     total_indicators = ind_result.scalar_one()
 
-    chat_result = await session.execute(
+    chat_result = await public_session.execute(
         select(func.count(Chat.telegram_chat_id)).where(Chat.enabled)
     )
     active_groups = chat_result.scalar_one()

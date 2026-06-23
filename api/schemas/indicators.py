@@ -1,10 +1,11 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class IndicatorResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     indicator_type: str
     indicator_value: str
     status: str

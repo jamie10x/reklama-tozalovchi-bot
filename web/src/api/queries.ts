@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./client";
 
 interface DashboardStats {
@@ -26,7 +26,7 @@ interface EventListParams {
   chat_id?: number;
 }
 
-interface Event {
+export interface Event {
   id: string;
   event_number: number;
   chat_id: number;
@@ -35,7 +35,15 @@ interface Event {
   event_type: string;
   severity: string;
   score: number;
+  confidence: number | null;
   title: string | null;
+  message_excerpt: string | null;
+  detection_reasons: Record<string, unknown> | null;
+  detected_indicators: Record<string, unknown> | null;
+  ad_score: number | null;
+  security_score: number | null;
+  ai_score: number | null;
+  ai_analysis: Record<string, unknown> | null;
   status: string;
   assigned_officer_id: number | null;
   created_at: string;
@@ -68,6 +76,22 @@ export function useEvent(id: string) {
     queryKey: ["event", id],
     queryFn: () => apiFetch(`/api/v1/events/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useUpdateEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      apiFetch<Event>(`/api/v1/events/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: (event) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["event", event.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }
 
@@ -108,7 +132,7 @@ export function useIndicators(params: {
   });
 }
 
-interface Group {
+export interface Group {
   telegram_chat_id: number;
   title: string | null;
   username: string | null;
@@ -123,10 +147,164 @@ interface GroupListResponse {
   total: number;
 }
 
+export interface GroupHealth {
+  telegram_chat_id: number;
+  title: string | null;
+  username: string | null;
+  enabled: boolean;
+  mode: string;
+  bot_can_delete_messages: boolean;
+  capture_enabled: boolean | null;
+  capture_mode: "metadata_only" | "flagged_only" | "full_text" | null;
+  metadata_retention_days: number | null;
+  flagged_retention_days: number | null;
+  observed_messages: number;
+  flagged_messages: number;
+  stored_text_messages: number;
+  pending_commands: number;
+  last_observed_at: string | null;
+  last_command_at: string | null;
+  last_command_status: string | null;
+  last_command_type: string | null;
+}
+
+interface GroupHealthListResponse {
+  items: GroupHealth[];
+  total: number;
+}
+
 export function useGroups() {
   return useQuery<GroupListResponse>({
     queryKey: ["groups"],
     queryFn: () => apiFetch("/api/v1/groups"),
+  });
+}
+
+export function useGroupHealth() {
+  return useQuery<GroupHealthListResponse>({
+    queryKey: ["groups-health"],
+    queryFn: () => apiFetch("/api/v1/groups/health"),
+    refetchInterval: 10_000,
+  });
+}
+
+export function useGroup(chatId?: number) {
+  return useQuery<Group>({
+    queryKey: ["group", chatId],
+    queryFn: () => apiFetch(`/api/v1/groups/${chatId}`),
+    enabled: !!chatId,
+  });
+}
+
+export interface CaptureSettings {
+  chat_id: number;
+  enabled: boolean;
+  capture_mode: "metadata_only" | "flagged_only" | "full_text";
+  metadata_retention_days: number;
+  flagged_retention_days: number;
+  updated_by_officer_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ObservedMessage {
+  id: string;
+  chat_id: number;
+  message_id: number;
+  sender_id: number | null;
+  sender_username: string | null;
+  sender_first_name: string | null;
+  sender_last_name: string | null;
+  sender_is_bot: boolean;
+  sender_chat_id: number | null;
+  message_type: string;
+  text: string | null;
+  text_stored: boolean;
+  has_text: boolean;
+  is_edited: boolean;
+  is_forwarded: boolean;
+  forward_from_chat_id: number | null;
+  reply_to_message_id: number | null;
+  detection_status: string;
+  risk_score: number;
+  ad_score: number | null;
+  security_score: number | null;
+  ai_score: number | null;
+  detection_result: Record<string, unknown> | null;
+  event_id: string | null;
+  message_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ObservedMessageListResponse {
+  items: ObservedMessage[];
+  total: number;
+}
+
+export function useActivityMessages(params: {
+  limit?: number;
+  chat_id?: number;
+  sender_id?: number;
+  flagged_only?: boolean;
+} = {}) {
+  const search = new URLSearchParams();
+  if (params.limit) search.set("limit", String(params.limit));
+  if (params.chat_id) search.set("chat_id", String(params.chat_id));
+  if (params.sender_id) search.set("sender_id", String(params.sender_id));
+  if (params.flagged_only) search.set("flagged_only", "true");
+  const qs = search.toString();
+
+  return useQuery<ObservedMessageListResponse>({
+    queryKey: ["activity", params],
+    queryFn: () => apiFetch(`/api/v1/activity/messages${qs ? `?${qs}` : ""}`),
+    refetchInterval: params.flagged_only ? 5_000 : false,
+  });
+}
+
+export function useLiveActivity(chatId?: number) {
+  const search = new URLSearchParams();
+  search.set("limit", "50");
+  if (chatId) search.set("chat_id", String(chatId));
+  return useQuery<ObservedMessageListResponse>({
+    queryKey: ["activity-live", chatId],
+    queryFn: () => apiFetch(`/api/v1/activity/live?${search.toString()}`),
+    refetchInterval: 5_000,
+  });
+}
+
+export function useCaptureSettings(chatId?: number) {
+  return useQuery<CaptureSettings>({
+    queryKey: ["capture-settings", chatId],
+    queryFn: () => apiFetch(`/api/v1/activity/groups/${chatId}/settings`),
+    enabled: !!chatId,
+  });
+}
+
+export function useUpdateCaptureSettings(chatId?: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      body: Partial<Pick<CaptureSettings, "enabled" | "capture_mode" | "metadata_retention_days" | "flagged_retention_days">>,
+    ) =>
+      apiFetch<CaptureSettings>(`/api/v1/activity/groups/${chatId}/settings`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["capture-settings", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["groups-health"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+  });
+}
+
+export function useRetentionStats(chatId?: number) {
+  return useQuery<Record<string, number>>({
+    queryKey: ["retention", chatId],
+    queryFn: () => apiFetch(`/api/v1/activity/groups/${chatId}/retention`),
+    enabled: !!chatId,
+    refetchInterval: 30_000,
   });
 }
 
@@ -208,7 +386,15 @@ export function useUsers(query: string) {
   });
 }
 
-interface CaseItem {
+export function useUserIntel(telegramId?: number) {
+  return useQuery({
+    queryKey: ["user-intel", telegramId],
+    queryFn: () => apiFetch(`/api/v1/users/${telegramId}/intel`),
+    enabled: !!telegramId,
+  });
+}
+
+export interface CaseItem {
   id: string;
   case_number: number;
   title: string;
@@ -239,6 +425,28 @@ export function useCases(params: { limit?: number; status?: string; severity?: s
   });
 }
 
+export interface CaseCreateRequest {
+  title: string;
+  severity?: string;
+  description?: string | null;
+  assigned_officer_id?: number | null;
+}
+
+export function useCreateCase() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CaseCreateRequest) =>
+      apiFetch<CaseItem>("/api/v1/cases", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 interface HealthResponse {
   status: string;
   database: string;
@@ -249,5 +457,95 @@ export function useHealth() {
     queryKey: ["health"],
     queryFn: () => apiFetch("/api/v1/health"),
     refetchInterval: 30_000,
+  });
+}
+
+export type EnforcementActionType =
+  | "delete_message"
+  | "trust_sender"
+  | "block_indicator"
+  | "allow_indicator"
+  | "refresh_member"
+  | "refresh_group_permissions"
+  | "restrict_member"
+  | "mute_member"
+  | "ban_member"
+  | "get_chat_info"
+  | "get_chat_administrators"
+  | "get_chat_member_count"
+  | "get_user_profile_photos"
+  | "save_observed_state"
+  | "send_recent_messages";
+
+export interface EnforcementAction {
+  id: string;
+  action_type: EnforcementActionType;
+  target_chat_id: number | null;
+  target_message_id: number | null;
+  target_user_id: number | null;
+  target_indicator_id: string | null;
+  status: string;
+  result: Record<string, unknown> | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface EnforcementActionRequest {
+  action_type: EnforcementActionType;
+  target_chat_id?: number | null;
+  target_message_id?: number | null;
+  target_user_id?: number | null;
+  target_indicator_id?: string | null;
+}
+
+export function useCreateEnforcementAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: EnforcementActionRequest) =>
+      apiFetch<EnforcementAction>("/api/v1/enforcement/actions", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enforcement"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["groups-health"] });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-live"] });
+    },
+  });
+}
+
+export function useRetryEnforcementAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<EnforcementAction>(`/api/v1/enforcement/actions/${id}/retry`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enforcement"] });
+      queryClient.invalidateQueries({ queryKey: ["groups-health"] });
+    },
+  });
+}
+
+export function useEnforcement(params: {
+  limit?: number;
+  status?: string;
+  action_type?: EnforcementActionType;
+  chat_id?: number;
+} = {}) {
+  const search = new URLSearchParams();
+  if (params.limit) search.set("limit", String(params.limit));
+  if (params.status) search.set("status", params.status);
+  if (params.action_type) search.set("action_type", params.action_type);
+  if (params.chat_id) search.set("chat_id", String(params.chat_id));
+  const qs = search.toString();
+
+  return useQuery<{ items: EnforcementAction[]; total: number }>({
+    queryKey: ["enforcement", params],
+    queryFn: () => apiFetch(`/api/v1/enforcement${qs ? `?${qs}` : ""}`),
   });
 }
