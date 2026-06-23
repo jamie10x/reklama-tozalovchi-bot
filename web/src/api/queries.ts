@@ -147,10 +147,44 @@ interface GroupListResponse {
   total: number;
 }
 
+export interface GroupHealth {
+  telegram_chat_id: number;
+  title: string | null;
+  username: string | null;
+  enabled: boolean;
+  mode: string;
+  bot_can_delete_messages: boolean;
+  capture_enabled: boolean | null;
+  capture_mode: "metadata_only" | "flagged_only" | "full_text" | null;
+  metadata_retention_days: number | null;
+  flagged_retention_days: number | null;
+  observed_messages: number;
+  flagged_messages: number;
+  stored_text_messages: number;
+  pending_commands: number;
+  last_observed_at: string | null;
+  last_command_at: string | null;
+  last_command_status: string | null;
+  last_command_type: string | null;
+}
+
+interface GroupHealthListResponse {
+  items: GroupHealth[];
+  total: number;
+}
+
 export function useGroups() {
   return useQuery<GroupListResponse>({
     queryKey: ["groups"],
     queryFn: () => apiFetch("/api/v1/groups"),
+  });
+}
+
+export function useGroupHealth() {
+  return useQuery<GroupHealthListResponse>({
+    queryKey: ["groups-health"],
+    queryFn: () => apiFetch("/api/v1/groups/health"),
+    refetchInterval: 10_000,
   });
 }
 
@@ -250,15 +284,27 @@ export function useCaptureSettings(chatId?: number) {
 export function useUpdateCaptureSettings(chatId?: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: Partial<Pick<CaptureSettings, "enabled" | "capture_mode">>) =>
+    mutationFn: (
+      body: Partial<Pick<CaptureSettings, "enabled" | "capture_mode" | "metadata_retention_days" | "flagged_retention_days">>,
+    ) =>
       apiFetch<CaptureSettings>(`/api/v1/activity/groups/${chatId}/settings`, {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capture-settings", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["groups-health"] });
       queryClient.invalidateQueries({ queryKey: ["groups"] });
     },
+  });
+}
+
+export function useRetentionStats(chatId?: number) {
+  return useQuery<Record<string, number>>({
+    queryKey: ["retention", chatId],
+    queryFn: () => apiFetch(`/api/v1/activity/groups/${chatId}/retention`),
+    enabled: !!chatId,
+    refetchInterval: 30_000,
   });
 }
 
@@ -464,8 +510,23 @@ export function useCreateEnforcementAction() {
       queryClient.invalidateQueries({ queryKey: ["enforcement"] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["groups-health"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
       queryClient.invalidateQueries({ queryKey: ["activity-live"] });
+    },
+  });
+}
+
+export function useRetryEnforcementAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<EnforcementAction>(`/api/v1/enforcement/actions/${id}/retry`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enforcement"] });
+      queryClient.invalidateQueries({ queryKey: ["groups-health"] });
     },
   });
 }

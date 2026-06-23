@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useCreateEnforcementAction, useGroups } from "../api/queries";
+import { useCreateEnforcementAction, useGroupHealth } from "../api/queries";
 import { Badge, EmptyState, PageHeader, SkeletonRows } from "../components/soc";
 import { useI18n } from "../i18n";
 
@@ -11,7 +11,7 @@ function readiness(group: { enabled: boolean; bot_can_delete_messages: boolean }
 
 export function GroupsPage() {
   const { t } = useI18n();
-  const { data, isLoading, error } = useGroups();
+  const { data, isLoading, error } = useGroupHealth();
   const command = useCreateEnforcementAction();
 
   const refresh = (chatId: number) => {
@@ -90,12 +90,35 @@ export function GroupsPage() {
                       <p className="text-xs text-surface-500">{t("delete_permission")}</p>
                       <p className="mt-1 font-semibold text-surface-900">{group.bot_can_delete_messages ? t("available") : t("missing")}</p>
                     </div>
-                    <div className="rounded-lg bg-surface-50 p-3">
-                      <p className="text-xs text-surface-500">{t("added")}</p>
-                      <p className="mt-1 font-semibold text-surface-900">
-                        {new Date(group.created_at).toLocaleDateString("uz-UZ")}
-                      </p>
+	                    <div className="rounded-lg bg-surface-50 p-3">
+	                      <p className="text-xs text-surface-500">{t("last_activity")}</p>
+	                      <p className="mt-1 font-semibold text-surface-900">
+	                        {group.last_observed_at ? new Date(group.last_observed_at).toLocaleString("uz-UZ") : "-"}
+	                      </p>
+	                    </div>
+	                  </div>
+
+                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+                    <div className="rounded-lg bg-white p-3 ring-1 ring-surface-200">
+                      <p className="text-xs text-surface-500">{t("observed_messages")}</p>
+                      <p className="mt-1 font-semibold text-surface-900">{group.observed_messages}</p>
                     </div>
+                    <div className="rounded-lg bg-white p-3 ring-1 ring-surface-200">
+                      <p className="text-xs text-surface-500">{t("flagged_messages")}</p>
+                      <p className="mt-1 font-semibold text-orange-700">{group.flagged_messages}</p>
+                    </div>
+                    <div className="rounded-lg bg-white p-3 ring-1 ring-surface-200">
+                      <p className="text-xs text-surface-500">{t("pending_commands")}</p>
+                      <p className="mt-1 font-semibold text-surface-900">{group.pending_commands}</p>
+                    </div>
+                    <div className="rounded-lg bg-white p-3 ring-1 ring-surface-200">
+                      <p className="text-xs text-surface-500">{t("capture_mode")}</p>
+                      <p className="mt-1 font-semibold text-surface-900">{group.capture_mode ?? "-"}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-lg border border-surface-200 bg-surface-50 p-3 text-xs text-surface-600">
+                    {t("last_command")}: {group.last_command_type ?? "-"} / {group.last_command_status ?? "-"}
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">

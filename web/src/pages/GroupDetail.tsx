@@ -8,8 +8,10 @@ import {
   useCreateEnforcementAction,
   useEnforcement,
   useGroup,
+  useRetentionStats,
   useUpdateCaptureSettings,
 } from "../api/queries";
+import { ApiError, downloadApiFile } from "../api/client";
 import { Badge, EmptyState, KeyValue, PageHeader, RiskMeter, SkeletonRows, relativeTime } from "../components/soc";
 import { useI18n } from "../i18n";
 
@@ -28,6 +30,7 @@ export function GroupDetailPage() {
   const chatId = Number(params.chatId);
   const { data: group, isLoading: groupLoading } = useGroup(chatId);
   const { data: settings } = useCaptureSettings(chatId);
+  const { data: retention } = useRetentionStats(chatId);
   const updateSettings = useUpdateCaptureSettings(chatId);
   const command = useCreateEnforcementAction();
   const { data: enforcement, refetch: refetchEnforcement } = useEnforcement({ limit: 5, chat_id: chatId });
@@ -36,6 +39,7 @@ export function GroupDetailPage() {
     limit: 80,
   });
   const [lastCommand, setLastCommand] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
   const latestCommand = enforcement?.items.find((item) => item.id === lastCommand) ?? (lastCommand ? undefined : enforcement?.items[0]);
   const hasActiveCommand = enforcement?.items.some((item) => item.status === "pending" || item.status === "claimed") ?? false;
 
@@ -73,6 +77,7 @@ export function GroupDetailPage() {
   }, [hasActiveCommand, refetchEnforcement]);
 
   const runCommand = (action_type: EnforcementActionType) => {
+    setOperationError(null);
     command.mutate(
       { action_type, target_chat_id: chatId },
       {
@@ -80,8 +85,23 @@ export function GroupDetailPage() {
           setLastCommand(action.id);
           refetchEnforcement();
         },
+        onError: (error) => {
+          setOperationError(error instanceof ApiError ? error.message : t("command_could_not_queue"));
+        },
       },
     );
+  };
+
+  const downloadRecent = async () => {
+    setOperationError(null);
+    try {
+      await downloadApiFile(
+        `/api/v1/activity/groups/${chatId}/export?limit=200`,
+        `observed-messages-${chatId}.json`,
+      );
+    } catch (error) {
+      setOperationError(error instanceof ApiError ? error.message : t("export_failed"));
+    }
   };
 
   return (
@@ -148,15 +168,47 @@ export function GroupDetailPage() {
             <p className="mt-3 text-xs text-surface-500">
               {t("full_text_policy_note")}
             </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-medium text-surface-500">
+                {t("metadata_retention_days")}
+                <input
+                  className="input mt-1"
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={settings?.metadata_retention_days ?? 30}
+                  onChange={(event) => updateSettings.mutate({ metadata_retention_days: Number(event.target.value) })}
+                />
+              </label>
+              <label className="text-xs font-medium text-surface-500">
+                {t("flagged_retention_days")}
+                <input
+                  className="input mt-1"
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={settings?.flagged_retention_days ?? 90}
+                  onChange={(event) => updateSettings.mutate({ flagged_retention_days: Number(event.target.value) })}
+                />
+              </label>
+            </div>
+            {retention && (
+              <div className="mt-4 rounded-lg border border-surface-200 bg-surface-50 p-3 text-xs text-surface-600">
+                {t("stored_text_messages")}: {retention.stored_text_messages ?? 0} / {t("retention_total")}: {retention.total_messages ?? 0}
+              </div>
+            )}
           </div>
 
           <div className="card">
             <div className="card-header">
               <h3 className="card-title">{t("group_commands")}</h3>
             </div>
-            <p className="mb-3 text-xs text-surface-500">{t("export_recent_messages_desc")}</p>
-            <div className="grid gap-2">
-              {groupCommands.map((item) => (
+	            <p className="mb-3 text-xs text-surface-500">{t("export_recent_messages_desc")}</p>
+	            <div className="grid gap-2">
+                  <button className="btn-primary justify-start" type="button" onClick={downloadRecent}>
+                    {t("download_recent_json")}
+                  </button>
+	              {groupCommands.map((item) => (
                 <button
                   key={item.action}
                   className="btn-secondary justify-start"
@@ -191,7 +243,7 @@ export function GroupDetailPage() {
                 </Link>
               </div>
             )}
-            {command.error && <p className="mt-3 text-sm text-red-700">{t("command_could_not_queue")}</p>}
+            {(command.error || operationError) && <p className="mt-3 text-sm text-red-700">{operationError || t("command_could_not_queue")}</p>}
           </div>
         </div>
 

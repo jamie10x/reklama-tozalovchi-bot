@@ -92,6 +92,20 @@ async def get_current_officer(
     return officer
 
 
+def require_any_role(*roles: str):
+    allowed = set(roles)
+
+    async def _check(officer: Officer = Depends(get_current_officer)) -> Officer:
+        if officer.role == "super_admin" or officer.role in allowed:
+            return officer
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Requires one of roles: {', '.join(sorted(allowed))}",
+        )
+
+    return _check
+
+
 async def require_role(role: str) -> type:
     async def _check(officer: Officer = Depends(get_current_officer)) -> Officer:
         if officer.role == "super_admin":

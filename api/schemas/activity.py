@@ -21,6 +21,8 @@ class CaptureSettingsResponse(BaseModel):
 class CaptureSettingsUpdateRequest(BaseModel):
     enabled: bool | None = None
     capture_mode: str | None = None
+    metadata_retention_days: int | None = None
+    flagged_retention_days: int | None = None
 
 
 class ObservedMessageResponse(BaseModel):

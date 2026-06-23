@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_officer, get_db
@@ -11,6 +11,7 @@ from app.database.repositories.activity import ActivityRepository
 from app.database.repositories.users import ObservedUserRepository
 from app.database.secadmin_models import (
     MemberRiskSignal,
+    ObservedMessage,
     ObservedUser,
     Officer,
     UserChatProfile,
@@ -87,6 +88,58 @@ async def get_user_intel(
         flagged_only=False,
         limit=50,
     )
+    cross_group_result = await session.execute(
+        select(
+            ObservedMessage.chat_id,
+            func.count().label("message_count"),
+            func.sum(cast(ObservedMessage.detection_status != "clean", Integer)).label("flagged_count"),
+            func.max(ObservedMessage.created_at).label("last_seen_at"),
+        )
+        .where(ObservedMessage.sender_id == telegram_id)
+        .group_by(ObservedMessage.chat_id)
+        .order_by(func.max(ObservedMessage.created_at).desc())
+        .limit(20)
+    )
+    timeline = []
+    for message in messages[:25]:
+        timeline.append(
+            {
+                "type": "message",
+                "chat_id": message.chat_id,
+                "message_id": message.message_id,
+                "status": message.detection_status,
+                "risk_score": message.risk_score,
+                "text": message.text if message.text_stored else None,
+                "created_at": message.created_at,
+            }
+        )
+    aliases = list(alias_result.scalars().all())
+    signals = list(signal_result.scalars().all())
+    profiles = list(profile_result.scalars().all())
+    for alias in aliases[:20]:
+        timeline.append(
+            {
+                "type": "alias",
+                "username": alias.username,
+                "first_name": alias.first_name,
+                "last_name": alias.last_name,
+                "created_at": alias.last_seen_at or alias.first_seen_at,
+            }
+        )
+    for signal in signals[:20]:
+        timeline.append(
+            {
+                "type": "risk_signal",
+                "chat_id": signal.chat_id,
+                "signal_type": signal.signal_type,
+                "signal_value": signal.signal_value,
+                "created_at": signal.detected_at or signal.created_at,
+            }
+        )
+    timeline.sort(
+        key=lambda item: item["created_at"].timestamp() if item.get("created_at") else 0,
+        reverse=True,
+    )
 
     return {
         "user": user_payload,
@@ -103,7 +156,7 @@ async def get_user_intel(
                 "last_message_at": p.last_message_at,
                 "last_security_event_at": p.last_security_event_at,
             }
-            for p in profile_result.scalars().all()
+            for p in profiles
             if p.chat_id != 0
         ],
         "aliases": [
@@ -114,7 +167,7 @@ async def get_user_intel(
                 "first_seen_at": a.first_seen_at,
                 "last_seen_at": a.last_seen_at,
             }
-            for a in alias_result.scalars().all()
+            for a in aliases
         ],
         "risk_signals": [
             {
@@ -124,8 +177,18 @@ async def get_user_intel(
                 "detected_at": s.detected_at,
                 "created_at": s.created_at,
             }
-            for s in signal_result.scalars().all()
+            for s in signals
         ],
+        "cross_group_activity": [
+            {
+                "chat_id": row.chat_id,
+                "message_count": int(row.message_count or 0),
+                "flagged_count": int(row.flagged_count or 0),
+                "last_seen_at": row.last_seen_at,
+            }
+            for row in cross_group_result
+        ],
+        "timeline": timeline[:80],
         "messages": [ObservedMessageResponse.model_validate(m) for m in messages],
     }
 

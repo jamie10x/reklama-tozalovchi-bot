@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ObservedMessage, useCreateEnforcementAction, useUserIntel } from "../api/queries";
-import { Badge, EmptyState, KeyValue, MessageInfoCard, PageHeader, RiskMeter, SkeletonRows, StatCard, relativeTime } from "../components/soc";
+import {
+  Badge,
+  EmptyState,
+  KeyValue,
+  MessageInfoCard,
+  PageHeader,
+  RiskMeter,
+  SkeletonRows,
+  StatCard,
+  relativeTime,
+} from "../components/soc";
 import { useI18n } from "../i18n";
 
 type IntelResponse = {
@@ -40,6 +50,13 @@ type IntelResponse = {
     detected_at?: string | null;
     created_at?: string | null;
   }>;
+  cross_group_activity?: Array<{
+    chat_id: number;
+    message_count: number;
+    flagged_count: number;
+    last_seen_at: string | null;
+  }>;
+  timeline?: Array<Record<string, unknown> & { type: string; created_at?: string | null }>;
   messages?: ObservedMessage[];
 };
 
@@ -71,12 +88,21 @@ export function MemberOSINTPage() {
     setSearchParams(next, { replace: true });
   };
 
+  const runMemberCommand = (chatId: number) => {
+    if (!intel?.user) return;
+    command.mutate(
+      {
+        action_type: "refresh_member",
+        target_chat_id: chatId,
+        target_user_id: intel.user.telegram_id,
+      },
+      { onSuccess: (action) => setLastAction(`${action.action_type}: ${action.status}`) },
+    );
+  };
+
   return (
     <div>
-      <PageHeader
-        title={t("member_intel")}
-        description={t("member_intel_desc")}
-      />
+      <PageHeader title={t("member_intel")} description={t("member_intel_desc")} />
 
       <div className="card mb-6">
         <label className="mb-1 block text-xs font-medium text-surface-500">{t("telegram_user_id")}</label>
@@ -88,18 +114,20 @@ export function MemberOSINTPage() {
             placeholder="660089656"
           />
           <Link to="/activity" className="btn-secondary">
-            Activity
+            {t("activity_store")}
           </Link>
         </div>
-        <p className="mt-2 text-xs text-surface-500">
-          OSINT here means Telegram-only observations from authorized groups. It does not query private Telegram history.
-        </p>
+        <p className="mt-2 text-xs text-surface-500">{t("osint_scope_note")}</p>
       </div>
 
-      {lastAction && <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{lastAction}</div>}
+      {lastAction && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          {lastAction}
+        </div>
+      )}
       {command.error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          Bot command could not be queued. Check target IDs and group permissions.
+          {t("command_could_not_queue")}
         </div>
       )}
 
@@ -113,10 +141,7 @@ export function MemberOSINTPage() {
           {t("intel_lookup_failed")}
         </div>
       )}
-
-      {!validId && (
-        <EmptyState title={t("enter_telegram_user_id")} description={t("open_member_prefill")} />
-      )}
+      {!validId && <EmptyState title={t("enter_telegram_user_id")} description={t("open_member_prefill")} />}
 
       {intel?.user && validId && (
         <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -153,16 +178,7 @@ export function MemberOSINTPage() {
                   <button
                     className="btn-secondary w-full"
                     disabled={command.isPending}
-                    onClick={() =>
-                      command.mutate(
-                        {
-                          action_type: "refresh_member",
-                          target_chat_id: intel.profiles?.[0]?.chat_id,
-                          target_user_id: intel.user?.telegram_id,
-                        },
-                        { onSuccess: (action) => setLastAction(`${action.action_type}: ${action.status}`) },
-                      )
-                    }
+                    onClick={() => runMemberCommand(intel.profiles?.[0]?.chat_id as number)}
                   >
                     {t("refresh_member")}
                   </button>
@@ -184,7 +200,9 @@ export function MemberOSINTPage() {
                       <p className="text-xs text-surface-500">
                         {[alias.first_name, alias.last_name].filter(Boolean).join(" ") || t("no_display_name")}
                       </p>
-                      <p className="mt-1 text-xs text-surface-400">{t("last_seen")} {relativeTime(alias.last_seen_at)}</p>
+                      <p className="mt-1 text-xs text-surface-400">
+                        {t("last_seen")} {relativeTime(alias.last_seen_at)}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -214,9 +232,9 @@ export function MemberOSINTPage() {
                         <Badge value={profile.is_admin ? "admin" : profile.membership_status || "member"} />
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-surface-500">
-                        <span>{profile.message_count ?? 0} messages</span>
-                        <span>{profile.security_event_count ?? 0} events</span>
-                        <span>{profile.deleted_message_count ?? 0} deleted</span>
+                        <span>{profile.message_count ?? 0} {t("messages")}</span>
+                        <span>{profile.security_event_count ?? 0} {t("events")}</span>
+                        <span>{profile.deleted_message_count ?? 0} {t("deleted_messages")}</span>
                         <span>{t("last_seen")} {relativeTime(profile.last_message_at)}</span>
                       </div>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -226,16 +244,7 @@ export function MemberOSINTPage() {
                         <button
                           className="btn-secondary px-2 py-1.5"
                           disabled={command.isPending}
-                          onClick={() =>
-                            command.mutate(
-                            {
-                              action_type: "refresh_member",
-                              target_chat_id: profile.chat_id,
-                              target_user_id: intel.user?.telegram_id,
-                            },
-                            { onSuccess: (action) => setLastAction(`${action.action_type}: ${action.status}`) },
-                            )
-                          }
+                          onClick={() => runMemberCommand(profile.chat_id)}
                         >
                           {t("refresh_member")}
                         </button>
@@ -245,6 +254,52 @@ export function MemberOSINTPage() {
                 </div>
               ) : (
                 <EmptyState title={t("no_group_profiles")} />
+              )}
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">{t("cross_group_activity")}</h3>
+              </div>
+              {intel.cross_group_activity?.length ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {intel.cross_group_activity.map((row) => (
+                    <Link key={row.chat_id} to={`/groups/${row.chat_id}`} className="rounded-lg border border-surface-200 p-4 hover:bg-surface-50">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-mono text-sm font-semibold text-surface-900">{row.chat_id}</span>
+                        <Badge value={`${row.flagged_count} ${t("flagged")}`} />
+                      </div>
+                      <p className="mt-2 text-xs text-surface-500">
+                        {row.message_count} {t("messages")} / {t("last_seen")} {relativeTime(row.last_seen_at)}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title={t("no_cross_group_activity")} />
+              )}
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">{t("member_timeline")}</h3>
+              </div>
+              {intel.timeline?.length ? (
+                <div className="space-y-3">
+                  {intel.timeline.slice(0, 30).map((item, index) => (
+                    <div key={index} className="rounded-lg border border-surface-200 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Badge value={item.type} />
+                        <span className="text-xs text-surface-500">{relativeTime(item.created_at)}</span>
+                      </div>
+                      <pre className="mt-2 max-h-32 overflow-auto rounded-lg bg-surface-50 p-2 text-xs text-surface-700">
+                        {JSON.stringify(item, null, 2)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title={t("no_member_timeline")} />
               )}
             </div>
 

@@ -11,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.database.repositories.activity import ActivityRepository
+from app.database.repositories.chats import ChatRepository
 from app.database.repositories.enforcement import EnforcementRepository
 from app.database.secadmin_models import EnforcementAction
-from app.database.session import get_secadmin_sessionmaker
+from app.database.session import get_secadmin_sessionmaker, get_sessionmaker
 
 logger = get_logger(__name__)
 
@@ -55,6 +56,25 @@ def _message_export_row(message) -> dict:
     }
 
 
+def _error_result(error: Exception | str) -> dict:
+    text = str(error)
+    lowered = text.lower()
+    if "chat not found" in lowered:
+        explanation = (
+            "The bot cannot access that chat or cannot DM the requesting officer. "
+            "For DM exports, open the bot in Telegram and press /start first."
+        )
+    elif "message to delete not found" in lowered:
+        explanation = "Telegram no longer has that message available for deletion, or the message ID does not belong to the selected group."
+    elif "not enough rights" in lowered or "not enough permissions" in lowered:
+        explanation = "The bot is missing the required administrator permission in that group."
+    elif "user not found" in lowered:
+        explanation = "Telegram cannot resolve that user in the selected group."
+    else:
+        explanation = "Telegram rejected the command. Check target IDs, bot membership, and admin permissions."
+    return {"error": text, "explanation": explanation}
+
+
 class EnforcementBridge:
     def __init__(self, bot: Bot) -> None:
         self._bot = bot
@@ -75,7 +95,7 @@ class EnforcementBridge:
                 await self._bot.delete_message(chat_id=chat_id, message_id=message_id)
                 return {"deleted": True}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "trust_sender":
             if user_id is None or chat_id is None:
@@ -99,7 +119,7 @@ class EnforcementBridge:
                 )
                 return {"trusted": True}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "restrict_member":
             if user_id is None or chat_id is None:
@@ -116,7 +136,7 @@ class EnforcementBridge:
                 )
                 return {"restricted": True}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "mute_member":
             if user_id is None or chat_id is None:
@@ -131,7 +151,7 @@ class EnforcementBridge:
                 )
                 return {"muted": True, "until": until_date}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "ban_member":
             if user_id is None or chat_id is None:
@@ -140,7 +160,7 @@ class EnforcementBridge:
                 await self._bot.ban_chat_member(chat_id=chat_id, user_id=user_id)
                 return {"banned": True}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "refresh_member":
             if user_id is None or chat_id is None:
@@ -149,7 +169,7 @@ class EnforcementBridge:
                 member = await self._bot.get_chat_member(chat_id=chat_id, user_id=user_id)
                 return {"status": member.status, "user_id": user_id}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "refresh_group_permissions":
             if chat_id is None:
@@ -157,12 +177,22 @@ class EnforcementBridge:
             try:
                 bot_member = await self._bot.get_chat_member(chat_id=chat_id, user_id=self._bot.id)
                 can_delete = getattr(bot_member, "can_delete_messages", False)
+                try:
+                    sm = get_sessionmaker()
+                    async with sm() as public_session:
+                        chat_repo = ChatRepository(public_session)
+                        await chat_repo.set_bot_permission(chat_id, can_delete)
+                        await public_session.commit()
+                except Exception:
+                    logger.warning("Failed to persist refreshed bot permissions", chat_id=chat_id)
                 return {
                     "can_delete_messages": can_delete,
+                    "can_restrict_members": getattr(bot_member, "can_restrict_members", False),
+                    "can_manage_chat": getattr(bot_member, "can_manage_chat", False),
                     "status": bot_member.status,
                 }
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "get_chat_info":
             if chat_id is None:
@@ -171,7 +201,7 @@ class EnforcementBridge:
                 chat = await self._bot.get_chat(chat_id=chat_id)
                 return {"chat": _json_model(chat)}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "get_chat_administrators":
             if chat_id is None:
@@ -180,7 +210,7 @@ class EnforcementBridge:
                 admins = await self._bot.get_chat_administrators(chat_id=chat_id)
                 return {"administrators": [_json_model(admin) for admin in admins]}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "get_chat_member_count":
             if chat_id is None:
@@ -189,7 +219,7 @@ class EnforcementBridge:
                 count = await self._bot.get_chat_member_count(chat_id=chat_id)
                 return {"member_count": count}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "get_user_profile_photos":
             if user_id is None:
@@ -198,7 +228,7 @@ class EnforcementBridge:
                 photos = await self._bot.get_user_profile_photos(user_id=user_id, limit=5)
                 return {"profile_photos": _json_model(photos)}
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type == "save_observed_state":
             return {"saved": True, "info": "Observed state is continuously persisted"}
@@ -240,7 +270,7 @@ class EnforcementBridge:
                     "note": "Export includes only messages already observed and stored by this bot.",
                 }
             except Exception as e:
-                return {"error": str(e)}
+                return _error_result(e)
 
         elif action_type in ("block_indicator", "allow_indicator"):
             return {"info": f"{action_type} logged but no Telegram API action needed"}
@@ -272,7 +302,7 @@ class EnforcementBridge:
                     action_id=str(action.id),
                     action_type=action.action_type,
                     chat_id=action.target_chat_id,
-                    result=result,
+                    result_keys=list(result.keys()),
                 )
             await session.flush()
         return len(actions)

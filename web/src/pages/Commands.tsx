@@ -5,7 +5,9 @@ import {
   useCreateEnforcementAction,
   useEnforcement,
   useGroups,
+  useRetryEnforcementAction,
 } from "../api/queries";
+import { ApiError, downloadApiFile } from "../api/client";
 import { Badge, EmptyState, KeyValue, PageHeader, relativeTime } from "../components/soc";
 import { useI18n } from "../i18n";
 
@@ -76,7 +78,21 @@ function summarizeResult(result: Record<string, unknown> | null, t: (key: string
   return rows.filter(([, value]) => value !== undefined && value !== null);
 }
 
-function CommandResultWindow({ item }: { item?: EnforcementAction }) {
+function telegramErrorText(item: EnforcementAction | undefined, t: (key: string) => string) {
+  if (!item?.result?.error) return "";
+  const explanation = item.result.explanation;
+  return typeof explanation === "string" ? explanation : t("telegram_error_generic");
+}
+
+function CommandResultWindow({
+  item,
+  onRetry,
+  retrying,
+}: {
+  item?: EnforcementAction;
+  onRetry: (id: string) => void;
+  retrying: boolean;
+}) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const summary = useMemo(() => summarizeResult(item?.result ?? null, t), [item, t]);
@@ -106,6 +122,11 @@ function CommandResultWindow({ item }: { item?: EnforcementAction }) {
         </div>
         <div className="flex items-center gap-2">
           <Badge value={item.status} />
+          {item.status === "failed" && (
+            <button type="button" className="btn-secondary px-3 py-1.5" onClick={() => onRetry(item.id)} disabled={retrying}>
+              {t("retry")}
+            </button>
+          )}
           <button type="button" className="btn-secondary px-3 py-1.5" onClick={copy} disabled={!item.result}>
             {copied ? t("copied") : t("copy_json")}
           </button>
@@ -119,7 +140,8 @@ function CommandResultWindow({ item }: { item?: EnforcementAction }) {
       )}
       {item.status === "failed" && item.result && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {t("command_failed_details")}
+          <p className="font-semibold">{t("command_failed_details")}</p>
+          <p className="mt-1">{telegramErrorText(item, t)}</p>
         </div>
       )}
 
@@ -168,13 +190,21 @@ function CommandResultWindow({ item }: { item?: EnforcementAction }) {
 export function CommandsPage() {
   const { t } = useI18n();
   const { data: groups } = useGroups();
-  const { data: enforcement, refetch: refetchEnforcement } = useEnforcement({ limit: 20 });
+  const [statusFilter, setStatusFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState<EnforcementActionType | "">("");
+  const { data: enforcement, refetch: refetchEnforcement } = useEnforcement({
+    limit: 50,
+    status: statusFilter || undefined,
+    action_type: actionFilter || undefined,
+  });
   const createAction = useCreateEnforcementAction();
+  const retryAction = useRetryEnforcementAction();
   const [actionType, setActionType] = useState<EnforcementActionType>("refresh_group_permissions");
   const [chatId, setChatId] = useState("");
   const [messageId, setMessageId] = useState("");
   const [userId, setUserId] = useState("");
   const [result, setResult] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedAction = actions.find((action) => action.value === actionType) ?? actions[0];
   const selectedCommand = enforcement?.items.find((item) => item.id === selectedId) ?? (selectedId ? undefined : enforcement?.items[0]);
@@ -194,6 +224,7 @@ export function CommandsPage() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    setFormError(null);
     createAction.mutate(
       {
         action_type: actionType,
@@ -207,8 +238,41 @@ export function CommandsPage() {
           setResult(`${action.action_type}: ${action.status}`);
           refetchEnforcement();
         },
+        onError: (error) => {
+          setFormError(error instanceof ApiError ? error.message : t("command_rejected"));
+        },
       },
     );
+  };
+
+  const retry = (id: string) => {
+    retryAction.mutate(id, {
+      onSuccess: (action) => {
+        setSelectedId(action.id);
+        refetchEnforcement();
+      },
+      onError: (error) => {
+        setFormError(error instanceof ApiError ? error.message : t("command_rejected"));
+      },
+    });
+  };
+
+  const downloadRecent = async () => {
+    const parsedChatId = parseOptionalInt(chatId);
+    if (!parsedChatId) {
+      setFormError(t("chat_id_required"));
+      return;
+    }
+    setFormError(null);
+    try {
+      await downloadApiFile(
+        `/api/v1/activity/groups/${parsedChatId}/export?limit=200`,
+        `observed-messages-${parsedChatId}.json`,
+      );
+      setResult(t("export_started"));
+    } catch (error) {
+      setFormError(error instanceof ApiError ? error.message : t("export_failed"));
+    }
   };
 
   return (
@@ -231,6 +295,10 @@ export function CommandsPage() {
                 {t(action.labelKey)}
               </button>
             ))}
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            {t("preflight_notice")}
           </div>
 
           <div>
@@ -289,14 +357,40 @@ export function CommandsPage() {
             <button className="btn-primary" disabled={createAction.isPending}>
               {t("queue_command")}
             </button>
+            <button type="button" className="btn-secondary" onClick={downloadRecent}>
+              {t("download_recent_json")}
+            </button>
             {result && <span className="text-sm text-green-700">{result}</span>}
-            {createAction.error && <span className="text-sm text-red-700">{t("command_rejected")}</span>}
           </div>
+          {(formError || createAction.error) && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {formError || t("command_rejected")}
+            </div>
+          )}
         </form>
 
         <div className="space-y-6">
           <div className="card">
-            <h3 className="card-title mb-4">{t("recent_commands")}</h3>
+            <div className="card-header">
+              <h3 className="card-title">{t("recent_commands")}</h3>
+              <button type="button" className="btn-secondary px-3 py-1.5" onClick={() => refetchEnforcement()}>
+                {t("refresh")}
+              </button>
+            </div>
+            <div className="mb-4 grid gap-3 md:grid-cols-2">
+              <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="">{t("all_statuses")}</option>
+                {["pending", "claimed", "completed", "failed", "cancelled"].map((status) => (
+                  <option key={status} value={status}>{t(status)}</option>
+                ))}
+              </select>
+              <select className="input" value={actionFilter} onChange={(event) => setActionFilter(event.target.value as EnforcementActionType | "")}>
+                <option value="">{t("all_commands")}</option>
+                {actions.map((action) => (
+                  <option key={action.value} value={action.value}>{t(action.labelKey)}</option>
+                ))}
+              </select>
+            </div>
             <div className="max-h-[360px] space-y-2 overflow-auto pr-1">
               {enforcement?.items.map((item) => (
                 <button
@@ -324,7 +418,7 @@ export function CommandsPage() {
               )}
             </div>
           </div>
-          <CommandResultWindow item={selectedCommand} />
+          <CommandResultWindow item={selectedCommand} onRetry={retry} retrying={retryAction.isPending} />
         </div>
       </div>
     </div>

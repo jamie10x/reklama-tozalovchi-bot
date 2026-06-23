@@ -34,6 +34,11 @@ class EnforcementRepository:
         await self._session.flush()
         return action
 
+    async def get_by_id(self, action_id: uuid.UUID) -> EnforcementAction | None:
+        stmt = select(EnforcementAction).where(EnforcementAction.id == action_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def claim_next(self, worker_id: str, batch_size: int = 5) -> list[EnforcementAction]:
         now = datetime.now(timezone.utc)
         stmt = (

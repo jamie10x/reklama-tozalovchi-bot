@@ -4,6 +4,7 @@ import logging
 
 from app.detector.extractor import extract_security_indicators
 from app.detector.models import SecurityResult
+from app.detector.normalizer import normalize_uzbek_search_text
 
 logger = logging.getLogger(__name__)
 
@@ -13,28 +14,31 @@ SUSPICIOUS_PHRASES: dict[str, dict[str, list[str]]] = {
             "pul ishlash", "tez pul", "oson pul", "kafolatlangan daromad",
             "investitsiya", "sarmoya kiriting", "foyda olasiz", "promokod",
             "bonus oling", "yutuq chiqdi", "sovrin yutdingiz", "plastik karta",
-            "pul mukofot", "mukofot bor", "karta raqamingiz",
+            "pul mukofot", "mukofot bor", "karta raqamingiz", "karta nomer",
+            "kartangizni yuboring", "click orqali", "payme orqali", "ishonchli daromad",
+            "kripto sarmoya", "pul tikib", "foyda kafolat",
         ],
         "phishing": [
             "kodni yuboring", "sms kod", "tasdiqlash kodi", "akkauntni tiklash",
             "parolni yuboring", "havolaga kiring", "linkka kiring", "kabinetga kiring",
-            "parol kodini", "karta parol",
+            "parol kodini", "karta parol", "telegram kod", "login kod", "akkaunt tasdiqlash",
         ],
         "drug_medical": [
             "retseptsiz", "kuchli dori", "maxfiy dori", "garantiya natija",
             "ozdiruvchi", "oriqlash", "jinsiy quvvat", "potensiya",
-            "narkotik", "giyohvand",
+            "narkotik", "giyohvand", "marixuana", "geroin", "tropikamid",
         ],
         "gambling": [
             "stavka", "tikish", "bukmeker", "kazino", "slot", "totalizator",
-            "aniq prognoz", "express stavka",
+            "aniq prognoz", "express stavka", "1xbet", "mostbet", "melbet",
         ],
         "fake_job": [
             "uyda ish", "kunlik to'lov", "kunlik daromad", "tajriba shart emas",
-            "pasport kerak", "karta ochish", "nomingizga karta",
+            "pasport kerak", "karta ochish", "nomingizga karta", "operator kerak",
         ],
         "violence": [
             "qurol sotiladi", "portlovchi", "urishamiz", "o'ldirish", "qo'rqitish",
+            "pichoq sotiladi", "travmatik", "patron",
         ],
     },
     "uz_cyrl": {
@@ -152,11 +156,14 @@ def _resolve_severity(score: int) -> str:
 
 def _extract_suspicious_phrases(text: str) -> dict[str, list[str]]:
     text_lower = text.lower()
+    text_uz = normalize_uzbek_search_text(text)
     matched: dict[str, list[str]] = {}
-    for categories in SUSPICIOUS_PHRASES.values():
+    for lang, categories in SUSPICIOUS_PHRASES.items():
+        haystack = text_uz if lang in {"uz", "uz_cyrl"} else text_lower
         for category, phrases in categories.items():
             for phrase in phrases:
-                if phrase in text_lower and phrase not in matched.get(category, []):
+                normalized_phrase = normalize_uzbek_search_text(phrase) if lang in {"uz", "uz_cyrl"} else phrase
+                if normalized_phrase in haystack and phrase not in matched.get(category, []):
                     matched.setdefault(category, []).append(phrase)
     return matched
 
